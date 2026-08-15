@@ -10,7 +10,7 @@ import {
 } from "react";
 import {
   changePassword as changePasswordFn,
-  getSession,
+  fetchMe,
   getThemePreference,
   login as loginFn,
   logout as logoutFn,
@@ -35,8 +35,8 @@ type AuthContextValue = {
   requestPasswordReset: typeof requestResetFn;
   resetPassword: typeof resetPasswordFn;
   changePassword: typeof changePasswordFn;
-  logout: () => void;
-  refreshSession: () => void;
+  logout: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -46,16 +46,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  const refreshSession = useCallback(() => {
-    setSessionState(getSession());
+  const refreshSession = useCallback(async () => {
+    const me = await fetchMe();
+    setSessionState(me);
   }, []);
 
   useEffect(() => {
     const preferred = getThemePreference();
     setTheme(preferred);
     document.documentElement.classList.toggle("dark", preferred === "dark");
-    refreshSession();
-    setReady(true);
+    refreshSession().finally(() => setReady(true));
   }, [refreshSession]);
 
   const toggleTheme = useCallback(() => {
@@ -66,8 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const logout = useCallback(() => {
-    logoutFn();
+  const logout = useCallback(async () => {
+    await logoutFn();
     setSessionState(null);
   }, []);
 
@@ -77,18 +77,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ready,
       theme,
       toggleTheme,
-      signup: (input) => {
-        const result = signupFn(input);
+      signup: signupFn,
+      login: async (input) => {
+        const result = await loginFn(input);
+        if (result.ok && !result.needsVerification) await refreshSession();
         return result;
       },
-      login: (input) => {
-        const result = loginFn(input);
-        if (result.ok && !result.needsVerification) refreshSession();
-        return result;
-      },
-      verifyOtp: (email, code) => {
-        const result = verifyOtpFn(email, code);
-        if (result.ok) refreshSession();
+      verifyOtp: async (email, code) => {
+        const result = await verifyOtpFn(email, code);
+        if (result.ok) await refreshSession();
         return result;
       },
       resendOtp: resendOtpFn,

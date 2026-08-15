@@ -6,16 +6,12 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, VideoCard } from "@/components/ui";
 import {
-  AGE_RANGES,
-  AgeRange,
   CATALOG,
-  filterCatalog,
   Language,
   LANGUAGES,
-  Theme,
   THEME_LABELS,
-  THEMES,
   Video,
+  videosByLanguage,
 } from "@/lib/catalog";
 import { discoverVideos, EXAMPLE_QUERIES, ParsedFilters } from "@/lib/discovery";
 
@@ -23,23 +19,10 @@ export default function DiscoverClient() {
   const { session, ready } = useAuth();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
-  const [language, setLanguage] = useState<Language | "">("");
-  const [theme, setTheme] = useState<Theme | "">("");
-  const [ageRange, setAgeRange] = useState<AgeRange | "">("");
   const [aiMatches, setAiMatches] = useState<Video[] | null>(null);
   const [filters, setFilters] = useState<ParsedFilters | null>(null);
   const [unmatched, setUnmatched] = useState(false);
   const [searched, setSearched] = useState(false);
-
-  const browseVideos = useMemo(
-    () =>
-      filterCatalog({
-        language: language || null,
-        theme: theme || null,
-        ageRange: ageRange || null,
-      }),
-    [language, theme, ageRange]
-  );
 
   function runDiscover(q: string) {
     if (!q.trim()) return;
@@ -64,7 +47,14 @@ export default function DiscoverClient() {
     runDiscover(query);
   }
 
-  const showing = aiMatches ?? browseVideos;
+  const sections = useMemo(
+    () =>
+      LANGUAGES.map((lang) => ({
+        language: lang,
+        videos: videosByLanguage(lang),
+      })),
+    []
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -76,7 +66,7 @@ export default function DiscoverClient() {
           What are you looking for?
         </h1>
         <p className="mt-3 text-lg text-[var(--foreground)]/70">
-          Browse the full catalog, or ask the AI in everyday words. Sign in to play any video.
+          Browse by language, or ask the AI. Sign in to play any video.
         </p>
       </div>
 
@@ -100,7 +90,7 @@ export default function DiscoverClient() {
         <div className="flex flex-col gap-3 rounded-3xl border border-[var(--border)]/50 bg-[var(--card)] p-3 shadow-xl sm:flex-row sm:items-center sm:p-4">
           <input
             className="field !border-0 !bg-transparent !shadow-none focus:!shadow-none"
-            placeholder='e.g. "songs about animals in Sepedi for my 2-year-old"'
+            placeholder='e.g. "songs in Sepedi for my 2-year-old"'
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Discovery query"
@@ -163,66 +153,55 @@ export default function DiscoverClient() {
               setQuery("");
             }}
           >
-            Clear AI results & browse catalog
+            Clear AI results & browse by language
           </button>
         </div>
       )}
 
-      {!aiMatches && (
-        <div className="mt-10 flex flex-wrap gap-3">
-          <select
-            className="field !w-auto"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as Language | "")}
-          >
-            <option value="">All languages</option>
-            {LANGUAGES.map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
-            ))}
-          </select>
-          <select
-            className="field !w-auto"
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as Theme | "")}
-          >
-            <option value="">All themes</option>
-            {THEMES.map((t) => (
-              <option key={t} value={t}>
-                {THEME_LABELS[t]}
-              </option>
-            ))}
-          </select>
-          <select
-            className="field !w-auto"
-            value={ageRange}
-            onChange={(e) => setAgeRange(e.target.value as AgeRange | "")}
-          >
-            <option value="">All ages</option>
-            {AGE_RANGES.map((a) => (
-              <option key={a} value={a}>
-                Ages {a}
-              </option>
-            ))}
-          </select>
-          <p className="self-center text-sm text-[var(--muted-foreground)]">
-            {showing.length} of {CATALOG.length} videos
+      {aiMatches ? (
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {aiMatches.map((video) => (
+            <VideoCard key={video.id} video={video} />
+          ))}
+          {aiMatches.length === 0 && (
+            <p className="col-span-full text-center text-[var(--muted-foreground)]">
+              No videos matched. Try another language or clear AI results.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="mt-12 space-y-14">
+          {sections.map(({ language, videos }) => (
+            <LanguageSection key={language} language={language} videos={videos} />
+          ))}
+          <p className="text-center text-sm text-[var(--muted-foreground)]">
+            {CATALOG.length} language videos in the pilot catalog
           </p>
         </div>
       )}
+    </div>
+  );
+}
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {showing.map((video) => (
+function LanguageSection({ language, videos }: { language: Language; videos: Video[] }) {
+  return (
+    <section id={language.toLowerCase()} className="scroll-mt-24">
+      <div className="mb-5 flex items-end justify-between gap-4 border-b border-[var(--border)] pb-3">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight md:text-3xl">{language}</h2>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            Nursery rhyme video for the {language} section
+          </p>
+        </div>
+        <span className="rounded-full bg-[var(--cream-soft)] px-3 py-1 text-xs font-bold text-[var(--primary)]">
+          {videos.length} video{videos.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {videos.map((video) => (
           <VideoCard key={video.id} video={video} />
         ))}
       </div>
-
-      {showing.length === 0 && (
-        <p className="mt-10 text-center text-[var(--muted-foreground)]">
-          No videos match. Try clearing a filter or asking the AI model.
-        </p>
-      )}
-    </div>
+    </section>
   );
 }

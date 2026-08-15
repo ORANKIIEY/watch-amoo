@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, AuthCard } from "@/components/ui";
-import { getDiscoveryLogs } from "@/lib/auth";
+import { fetchDiscoveryInsights } from "@/lib/auth";
 
 export default function AccountPage() {
   const { session, ready, changePassword } = useAuth();
@@ -14,29 +14,31 @@ export default function AccountPage() {
   const [success, setSuccess] = useState("");
   const [logCount, setLogCount] = useState(0);
   const [matchedPct, setMatchedPct] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (ready && !session) router.replace("/login");
   }, [ready, session, router]);
 
   useEffect(() => {
-    const logs = getDiscoveryLogs();
-    setLogCount(logs.length);
-    if (logs.length) {
-      const matched = logs.filter((l) => l.matchCount > 0).length;
-      setMatchedPct(Math.round((matched / logs.length) * 100));
-    }
+    if (!session) return;
+    fetchDiscoveryInsights().then((insights) => {
+      setLogCount(insights.total);
+      setMatchedPct(insights.matchedPct);
+    });
   }, [session]);
 
-  function onChangePassword(e: FormEvent<HTMLFormElement>) {
+  async function onChangePassword(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const result = changePassword({
+    const result = await changePassword({
       current: String(fd.get("current") || ""),
       next: String(fd.get("next") || ""),
     });
+    setLoading(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -64,7 +66,7 @@ export default function AccountPage() {
         <div className="mt-8 border-t border-[var(--border)] pt-6">
           <h2 className="text-xl font-bold">Discovery insights</h2>
           <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-            Pilot market-uptake signals from AI Discovery queries on this device.
+            Market-uptake signals from your AI Discovery queries (stored in SQLite).
           </p>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-[var(--border)] p-4">
@@ -79,7 +81,10 @@ export default function AccountPage() {
         </div>
       </AuthCard>
 
-      <AuthCard title="Change password" subtitle="Update your password while signed in.">
+      <AuthCard
+        title="Change password"
+        subtitle="New password needs 8+ characters with a letter and a number."
+      >
         {error && <Alert tone="error">{error}</Alert>}
         {success && <Alert tone="success">{success}</Alert>}
         <form onSubmit={onChangePassword} className="space-y-4">
@@ -106,12 +111,12 @@ export default function AccountPage() {
               type="password"
               className="field"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
             />
           </div>
-          <button type="submit" className="btn btn-primary w-full">
-            Update password
+          <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+            {loading ? "Updating…" : "Update password"}
           </button>
         </form>
       </AuthCard>

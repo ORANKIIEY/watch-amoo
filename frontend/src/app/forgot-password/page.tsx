@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, AuthCard } from "@/components/ui";
-import { sendCodeToEmail } from "@/lib/sendCode";
 
 export default function ForgotPasswordPage() {
   const { requestPasswordReset } = useAuth();
@@ -24,24 +23,12 @@ export default function ForgotPasswordPage() {
     const mail = String(fd.get("email") || "")
       .trim()
       .toLowerCase();
-    const result = requestPasswordReset(mail);
+    const result = await requestPasswordReset(mail);
+    setLoading(false);
     if (!result.ok) {
-      setLoading(false);
       setError(result.error);
       return;
     }
-
-    const emailResult = await sendCodeToEmail({
-      email: mail,
-      code: result.token,
-      type: "reset",
-    });
-    setLoading(false);
-    if (!emailResult.ok) {
-      setError(emailResult.error);
-      return;
-    }
-
     setEmail(mail);
     sessionStorage.setItem("watchamoo_reset_email", mail);
     setSuccess(true);
@@ -50,12 +37,12 @@ export default function ForgotPasswordPage() {
   return (
     <AuthCard
       title="Forgot password"
-      subtitle="Enter your email and we’ll send a reset code — check your inbox."
+      subtitle="Enter your email. If an account exists, we’ll send a reset code."
     >
       {error && <Alert tone="error">{error}</Alert>}
       {success && (
         <Alert tone="success">
-          Reset code sent to {email}. Check your email, then continue to set a new password.
+          If an account exists for {email}, a reset code was sent. Check your inbox.
         </Alert>
       )}
       {!success ? (

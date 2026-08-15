@@ -28,7 +28,7 @@ function buildHtml(type: EmailCodeType, code: string) {
 
 async function sendWithResend(to: string, subject: string, html: string) {
   const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
+  if (!key || key.includes("xxxxxxxx") || key === "re_xxxxxxxx") return null;
   const resend = new Resend(key);
   const result = await resend.emails.send({
     from: fromAddress(),
@@ -82,7 +82,13 @@ export async function sendAuthCodeEmail(input: {
   const viaSmtp = await sendWithSmtp(input.to, subject, html);
   if (viaSmtp) return { provider: "smtp" as const };
 
+  // Local/dev only — never enable in production
+  if (process.env.EMAIL_DEV_LOG === "true") {
+    console.log(`[watchamoo] DEV ${input.type} code for ${input.to}: ${input.code}`);
+    return { provider: "dev-log" as const };
+  }
+
   throw new Error(
-    "Email is not configured. Add RESEND_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASS in backend/.env"
+    "Email is not configured. Add RESEND_API_KEY or SMTP_* in backend/.env (or EMAIL_DEV_LOG=true for local console codes)."
   );
 }

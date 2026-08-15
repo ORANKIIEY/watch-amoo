@@ -1,8 +1,16 @@
 import type { NextConfig } from "next";
 
+const BACKEND = process.env.BACKEND_URL || "http://localhost:4000";
+
 const nextConfig: NextConfig = {
-  transpilePackages: ["@watchamoo/backend"],
-  serverExternalPackages: ["nodemailer", "resend"],
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${BACKEND}/api/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

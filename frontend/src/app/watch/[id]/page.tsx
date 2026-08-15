@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { getVideoById, THEME_LABELS } from "@/lib/catalog";
+import { getVideoById, THEME_LABELS, videoSrcFor } from "@/lib/catalog";
 
 export default function WatchPage() {
   const params = useParams<{ id: string }>();
@@ -34,14 +34,17 @@ export default function WatchPage() {
 
       <div className="mt-5 overflow-hidden rounded-3xl border border-[var(--border)]/40 bg-black shadow-[var(--shadow)]">
         {canPlay ? (
-          <div className="aspect-video w-full">
-            <iframe
+          <div className="aspect-video w-full bg-black">
+            <video
+              key={video.language}
               className="h-full w-full"
-              src={`https://www.youtube.com/embed/${video.youtubeId}?rel=0`}
-              title={video.titleLocal}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+              controls
+              playsInline
+              preload="metadata"
+              src={video.videoSrc || videoSrcFor(video.language)}
+            >
+              Your browser does not support video playback.
+            </video>
           </div>
         ) : (
           <div

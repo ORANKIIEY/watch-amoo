@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, AuthCard } from "@/components/ui";
-import { sendCodeToEmail } from "@/lib/sendCode";
 
 export default function VerifyPage() {
   const { verifyOtp, resendOtp } = useAuth();
@@ -22,14 +21,14 @@ export default function VerifyPage() {
     if (!pending) router.replace("/signup");
   }, [router]);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setMessage("");
     setLoading(true);
     const fd = new FormData(e.currentTarget);
     const code = String(fd.get("otp") || "");
-    const result = verifyOtp(email, code);
+    const result = await verifyOtp(email, code);
     setLoading(false);
     if (!result.ok) {
       setError(result.error);
@@ -45,20 +44,10 @@ export default function VerifyPage() {
     setError("");
     setMessage("");
     setResending(true);
-    const result = resendOtp(email);
-    if (!result.ok) {
-      setResending(false);
-      setError(result.error);
-      return;
-    }
-    const emailResult = await sendCodeToEmail({
-      email,
-      code: result.otp,
-      type: "verification",
-    });
+    const result = await resendOtp(email);
     setResending(false);
-    if (!emailResult.ok) {
-      setError(emailResult.error);
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
     setMessage("A new verification code was sent to your email.");

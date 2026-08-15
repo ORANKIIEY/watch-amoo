@@ -12,20 +12,23 @@ export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setEmail(sessionStorage.getItem("watchamoo_reset_email") || "");
   }, []);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const result = resetPassword({
+    const result = await resetPassword({
       email: String(fd.get("email") || email),
       token: String(fd.get("token") || ""),
       password: String(fd.get("password") || ""),
     });
+    setLoading(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -38,7 +41,7 @@ export default function ResetPasswordPage() {
   return (
     <AuthCard
       title="Reset password"
-      subtitle="Enter the code from your email and choose a new password."
+      subtitle="Enter the code from your email and choose a new password (8+ chars, letter + number)."
     >
       {error && <Alert tone="error">{error}</Alert>}
       {success && <Alert tone="success">Password updated. Redirecting to log in…</Alert>}
@@ -82,12 +85,12 @@ export default function ResetPasswordPage() {
             type="password"
             className="field"
             required
-            minLength={6}
+            minLength={8}
             autoComplete="new-password"
           />
         </div>
-        <button type="submit" className="btn btn-primary w-full" disabled={success}>
-          Update password
+        <button type="submit" className="btn btn-primary w-full" disabled={success || loading}>
+          {loading ? "Updating…" : "Update password"}
         </button>
       </form>
       <p className="mt-5 text-center text-sm text-[var(--muted-foreground)]">

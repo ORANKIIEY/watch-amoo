@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  verified     Boolean  @default(false)
+  failedLogins Int      @default(0)
+  lockedUntil  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions        Session[]
+  otpCodes        OtpCode[]
+  discoveryLogs   DiscoveryLog[]
+  supportTickets  SupportTicket[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  codeHash  String
+  type      String // verification | reset
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+model Video {
+  id          String   @id
+  title       String
+  titleLocal  String
+  language    String
+  theme       String
+  ageRange    String
+  duration    String
+  description String
+  videoSrc    String
+  driveFileId String?
+  thumbA      String
+  thumbB      String
+  createdAt   DateTime @default(now())
+
+  @@index([language])
+  @@index([theme])
+}
+
+model DiscoveryLog {
+  id          String   @id @default(cuid())
+  query       String
+  language    String?
+  theme       String?
+  ageRange    String?
+  matchCount  Int      @default(0)
+  matchedIds  String   @default("[]") // JSON array string for SQLite portability
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  userId    String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}

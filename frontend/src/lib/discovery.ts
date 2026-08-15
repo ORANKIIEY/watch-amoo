@@ -8,7 +8,7 @@ import {
   THEMES,
   Video,
 } from "./catalog";
-import { getSession, logDiscovery } from "./auth";
+import { logDiscovery } from "./auth";
 
 export type ParsedFilters = {
   language: Language | null;
@@ -166,15 +166,13 @@ export function discoverVideos(query: string): {
     : [];
   const unmatchedDemand = hasFilters && exact.length === 0;
 
-  const session = getSession();
-  logDiscovery({
+  void logDiscovery({
     query,
     language: filters.language,
     theme: filters.theme,
     ageRange: filters.ageRange,
     matchCount: exact.length,
     matchedIds: exact.map((v) => v.id),
-    userEmail: session?.email,
   });
 
   return { filters, matches, unmatchedDemand };
@@ -187,7 +185,7 @@ export const DISCOVERY_VOCAB = {
 };
 
 export const EXAMPLE_QUERIES = [
-  "songs about animals in Sepedi for my 2-year-old",
-  "Sesotho lullabies for a baby",
-  "counting songs in Setswana for age 4",
+  "nursery rhymes in Sepedi",
+  "Sesotho songs for my baby",
+  "Setswana videos for kids",
 ];

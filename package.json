@@ -7,10 +7,15 @@
     "backend"
   ],
   "scripts": {
-    "dev": "npm run dev -w @watchamoo/frontend",
+    "dev": "concurrently -n frontend,backend -c cyan,magenta \"npm run dev -w @watchamoo/frontend\" \"npm run dev -w @watchamoo/backend\"",
     "dev:frontend": "npm run dev -w @watchamoo/frontend",
     "dev:backend": "npm run dev -w @watchamoo/backend",
-    "build": "npm run build -w @watchamoo/frontend",
+    "build": "npm run build -w @watchamoo/backend && npm run build -w @watchamoo/frontend",
+    "db:setup": "npm run db:setup -w @watchamoo/backend",
+    "db:seed": "npm run db:seed -w @watchamoo/backend",
     "start": "npm run start -w @watchamoo/frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
   }
 }

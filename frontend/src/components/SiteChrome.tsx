@@ -69,8 +69,7 @@ export function SiteHeader() {
                 type="button"
                 className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] hover:opacity-90"
                 onClick={() => {
-                  logout();
-                  router.push("/");
+                  void logout().then(() => router.push("/"));
                 }}
               >
                 Log out

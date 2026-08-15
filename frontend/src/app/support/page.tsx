@@ -9,18 +9,21 @@ export default function SupportPage() {
   const { session } = useAuth();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setSuccess(false);
+    setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const result = submitSupport({
+    const result = await submitSupport({
       name: String(fd.get("name") || ""),
       email: String(fd.get("email") || ""),
       subject: String(fd.get("subject") || ""),
       message: String(fd.get("message") || ""),
     });
+    setLoading(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -36,9 +39,7 @@ export default function SupportPage() {
     >
       {error && <Alert tone="error">{error}</Alert>}
       {success && (
-        <Alert tone="success">
-          Thanks — your message was saved. Our team will follow up (demo stores tickets locally).
-        </Alert>
+        <Alert tone="success">Thanks — your message was saved to our support inbox.</Alert>
       )}
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
@@ -78,8 +79,8 @@ export default function SupportPage() {
           </label>
           <textarea id="message" name="message" className="field min-h-32 resize-y" required />
         </div>
-        <button type="submit" className="btn btn-primary w-full">
-          Send message
+        <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+          {loading ? "Sending…" : "Send message"}
         </button>
       </form>
     </AuthCard>

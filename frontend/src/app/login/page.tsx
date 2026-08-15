@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, AuthCard } from "@/components/ui";
-import { sendCodeToEmail } from "@/lib/sendCode";
 
 function safeNext(path: string | null) {
   if (path && path.startsWith("/") && !path.startsWith("//")) return path;
@@ -26,37 +25,24 @@ function LoginForm() {
     setLoading(true);
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get("email") || "");
-    const result = login({
+    const result = await login({
       email,
       password: String(fd.get("password") || ""),
     });
+    setLoading(false);
     if (!result.ok) {
-      setLoading(false);
       setError(result.error);
       return;
     }
     if (result.needsVerification) {
-      if (!result.otp) {
-        setLoading(false);
-        setError("Could not create a verification code. Please try again.");
-        return;
-      }
-      const emailResult = await sendCodeToEmail({
-        email: email.trim().toLowerCase(),
-        code: result.otp,
-        type: "verification",
-      });
-      setLoading(false);
-      if (!emailResult.ok) {
-        setError(emailResult.error);
-        return;
-      }
-      sessionStorage.setItem("watchamoo_pending_email", email.trim().toLowerCase());
+      sessionStorage.setItem(
+        "watchamoo_pending_email",
+        (result.email || email).trim().toLowerCase()
+      );
       sessionStorage.setItem("watchamoo_next", next);
       router.push("/verify");
       return;
     }
-    setLoading(false);
     router.push(next);
   }
 
