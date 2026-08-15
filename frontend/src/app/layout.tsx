@@ -13,7 +13,7 @@ const nunito = Nunito({
 export const metadata: Metadata = {
   title: "watchamoo — Kids entertainment in your child's home language",
   description:
-    "Ad-free nursery rhymes, songs and stories in Sepedi, Sesotho and Setswana — plus an AI Discovery Assistant. Start your 7-day free trial.",
+    "Ad-free nursery rhymes, songs and stories in Sepedi, Sesotho and Setswana — plus an AI Discovery Assistant. Create a free account to watch.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

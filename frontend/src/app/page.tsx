@@ -79,10 +79,10 @@ export default function HomePage() {
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary-foreground)]/20">
                 <PlayIcon />
               </span>
-              Start 7-Day Free Trial
+              Create a free account
             </Link>
             <p className="text-sm font-semibold text-[var(--primary)]">
-              $9.99/month after your 7-day free trial
+              Sign in to play — no payment required for this pilot
             </p>
           </div>
 
@@ -116,7 +116,7 @@ export default function HomePage() {
             </div>
             <h3 className="mb-3 text-xl font-bold">100% Ad-Free</h3>
             <p className="text-sm leading-relaxed text-[var(--foreground)]/75">
-              Kids enjoy uninterrupted video entertainment with no ads, pop-ups or distractions.
+              Videos play from our own files — no YouTube embeds, no ads, no related-video junk.
             </p>
           </div>
           <div className="rounded-3xl bg-[var(--tile-mint)] p-8 text-center">

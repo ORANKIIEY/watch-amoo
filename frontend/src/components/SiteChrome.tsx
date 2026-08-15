@@ -119,12 +119,12 @@ export function SiteFooter() {
             Support
           </Link>
           <Link href="/signup" className="hover:text-[var(--primary)]">
-            Free trial
+            Sign up
           </Link>
         </div>
       </div>
       <p className="mx-auto mt-8 max-w-6xl px-6 text-xs text-[var(--muted-foreground)]">
-        $9.99/month after your 7-day free trial. No credit card required to start.
+        Free pilot — create an account to watch. No subscription billing yet.
       </p>
     </footer>
   );
