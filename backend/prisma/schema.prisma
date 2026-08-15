@@ -22,6 +22,9 @@ model User {
   otpCodes        OtpCode[]
   discoveryLogs   DiscoveryLog[]
   supportTickets  SupportTicket[]
+  favorites       Favorite[]
+  watchHistory    WatchHistory[]
+  parentalPin     ParentalPin?
 }
 
 model Session {
@@ -51,19 +54,20 @@ model OtpCode {
 }
 
 model Video {
-  id          String   @id
-  title       String
-  titleLocal  String
-  language    String
-  theme       String
-  ageRange    String
-  duration    String
-  description String
-  videoSrc    String
-  driveFileId String?
-  thumbA      String
-  thumbB      String
-  createdAt   DateTime @default(now())
+  id           String   @id
+  title        String
+  titleLocal   String
+  language     String
+  theme        String
+  ageRange     String
+  duration     String
+  description  String
+  videoSrc     String
+  driveFileId  String?
+  thumbA       String
+  thumbB       String
+  thumbnailSrc String  @default("")
+  createdAt    DateTime @default(now())
 
   @@index([language])
   @@index([theme])
@@ -95,4 +99,40 @@ model SupportTicket {
   createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId])
+}
+
+model WatchHistory {
+  id              String   @id @default(cuid())
+  userId          String
+  videoId         String
+  progressSeconds Int      @default(0)
+  durationSeconds Int?
+  completed       Boolean  @default(false)
+  lastWatchedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId, lastWatchedAt])
+}
+
+model ParentalPin {
+  userId    String  @id
+  pinHash   String
+  kidsMode  Boolean @default(false)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

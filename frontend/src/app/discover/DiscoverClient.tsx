@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, VideoCard } from "@/components/ui";
 import {
-  CATALOG,
+  fetchCatalog,
   Language,
   LANGUAGES,
   THEME_LABELS,
@@ -19,18 +19,27 @@ export default function DiscoverClient() {
   const { session, ready } = useAuth();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
+  const [titleQuery, setTitleQuery] = useState("");
+  const [catalog, setCatalog] = useState<Video[]>([]);
   const [aiMatches, setAiMatches] = useState<Video[] | null>(null);
   const [filters, setFilters] = useState<ParsedFilters | null>(null);
   const [unmatched, setUnmatched] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [titleResults, setTitleResults] = useState<Video[] | null>(null);
+
+  useEffect(() => {
+    fetchCatalog().then(setCatalog);
+  }, []);
 
   function runDiscover(q: string) {
     if (!q.trim()) return;
-    const result = discoverVideos(q.trim());
-    setAiMatches(result.matches);
-    setFilters(result.filters);
-    setUnmatched(result.unmatchedDemand);
-    setSearched(true);
+    setTitleResults(null);
+    void discoverVideos(q.trim()).then((result) => {
+      setAiMatches(result.matches);
+      setFilters(result.filters);
+      setUnmatched(result.unmatchedDemand);
+      setSearched(true);
+    });
   }
 
   useEffect(() => {
@@ -47,26 +56,39 @@ export default function DiscoverClient() {
     runDiscover(query);
   }
 
+  async function onTitleSearch(e: FormEvent) {
+    e.preventDefault();
+    const q = titleQuery.trim();
+    if (!q) {
+      setTitleResults(null);
+      return;
+    }
+    setAiMatches(null);
+    setSearched(false);
+    const videos = await fetchCatalog({ q });
+    setTitleResults(videos);
+  }
+
   const sections = useMemo(
     () =>
       LANGUAGES.map((lang) => ({
         language: lang,
-        videos: videosByLanguage(lang),
+        videos: videosByLanguage(lang, catalog),
       })),
-    []
+    [catalog]
   );
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
       <div className="fade-up max-w-3xl">
         <p className="text-sm font-bold uppercase tracking-wider text-[var(--primary)]">
-          AI Discovery Model
+          AI Discovery Assistant
         </p>
         <h1 className="mt-2 text-4xl font-black tracking-tight md:text-5xl">
           What are you looking for?
         </h1>
         <p className="mt-3 text-lg text-[var(--foreground)]/70">
-          Browse by language, or ask the AI. Sign in to play any video.
+          Browse by language, search by title, or ask the AI. Sign in to play any video.
         </p>
       </div>
 
@@ -116,9 +138,28 @@ export default function DiscoverClient() {
         </div>
       </form>
 
+      <form onSubmit={onTitleSearch} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <label className="sr-only" htmlFor="title-search">
+          Search by title
+        </label>
+        <input
+          id="title-search"
+          className="field"
+          placeholder="Search by title…"
+          value={titleQuery}
+          onChange={(e) => setTitleQuery(e.target.value)}
+        />
+        <button type="submit" className="btn btn-secondary shrink-0">
+          Search titles
+        </button>
+      </form>
+
       {searched && filters && (
         <div className="mt-5 space-y-3">
-          <Alert tone="success">{filters.rationale}</Alert>
+          <Alert tone="success">
+            {filters.rationale}
+            {filters.source ? ` (${filters.source})` : ""}
+          </Alert>
           {unmatched && (
             <Alert tone="info">
               Exact match not in the pilot yet — showing closest videos. This unmatched request is
@@ -151,14 +192,26 @@ export default function DiscoverClient() {
               setSearched(false);
               setUnmatched(false);
               setQuery("");
+              setTitleResults(null);
             }}
           >
-            Clear AI results & browse by language
+            Clear results & browse by language
           </button>
         </div>
       )}
 
-      {aiMatches ? (
+      {titleResults ? (
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {titleResults.map((video) => (
+            <VideoCard key={video.id} video={video} />
+          ))}
+          {titleResults.length === 0 && (
+            <p className="col-span-full text-center text-[var(--muted-foreground)]">
+              No titles matched that search.
+            </p>
+          )}
+        </div>
+      ) : aiMatches ? (
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {aiMatches.map((video) => (
             <VideoCard key={video.id} video={video} />
@@ -175,7 +228,7 @@ export default function DiscoverClient() {
             <LanguageSection key={language} language={language} videos={videos} />
           ))}
           <p className="text-center text-sm text-[var(--muted-foreground)]">
-            {CATALOG.length} language videos in the pilot catalog
+            {catalog.length} language videos in the pilot catalog
           </p>
         </div>
       )}

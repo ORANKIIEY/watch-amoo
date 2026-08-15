@@ -16,6 +16,7 @@ export type ParsedFilters = {
   ageRange: AgeRange | null;
   confidence: "high" | "medium" | "low";
   rationale: string;
+  source?: "llm" | "local";
 };
 
 const LANGUAGE_ALIASES: Record<string, Language> = {
@@ -70,7 +71,7 @@ const THEME_ALIASES: Record<string, Theme> = {
   lumela: "greeting",
 };
 
-/** Local NLP-style parser so the Discovery Assistant works without an API key. */
+/** Local NLP-style parser so Discovery works without an API key. */
 export function parseQueryLocally(query: string): ParsedFilters {
   const q = query.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
   const compact = q.replace(/[^a-z0-9\s]/g, " ");
@@ -122,19 +123,37 @@ export function parseQueryLocally(query: string): ParsedFilters {
     theme,
     ageRange,
     confidence,
+    source: "local",
     rationale:
       bits.length > 0
-        ? `AI model parsed ${bits.join(", ")} from your request.`
+        ? `Parsed ${bits.join(", ")} from your request.`
         : "No clear language/theme/age found — showing popular picks from the pilot catalog.",
   };
 }
 
-export function discoverVideos(query: string): {
+async function parseQueryRemote(query: string): Promise<ParsedFilters | null> {
+  try {
+    const res = await fetch("/api/discovery/parse", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { ok?: boolean; filters?: ParsedFilters };
+    if (!data.ok || !data.filters) return null;
+    return data.filters;
+  } catch {
+    return null;
+  }
+}
+
+export async function discoverVideos(query: string): Promise<{
   filters: ParsedFilters;
   matches: Video[];
   unmatchedDemand: boolean;
-} {
-  const filters = parseQueryLocally(query);
+}> {
+  const filters = (await parseQueryRemote(query)) || parseQueryLocally(query);
   const hasFilters = Boolean(filters.language || filters.theme || filters.ageRange);
 
   let matches: Video[] = [];

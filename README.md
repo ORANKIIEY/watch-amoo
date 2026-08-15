@@ -46,3 +46,14 @@ Next rewrites `/api/*` to the Express backend. Auth uses an HttpOnly `watchamoo_
 - Server-generated OTPs (hashed), bcrypt passwords, HttpOnly sessions
 - Rate-limited send-code paths; no email-existence leak on password reset
 - Frontend auth/support/discovery logging talk to Express — not localStorage secrets
+
+## Phase 2 (done)
+
+- Removed unpaid “7-day free trial / $9.99” marketing; pilot is free with account signup
+- Ad-free claim kept for self-hosted MP4 playback (not YouTube)
+
+## Phase 3–4 (done)
+
+- Optional `OPENAI_API_KEY` LLM discovery with local parser fallback; unmatched demand logged
+- Favorites, continue-watching, watch history; parental PIN / Kids Mode
+- Catalog served from SQLite; SVG thumbnails; related videos; title search; kids-safe HTML5 player

@@ -6,6 +6,7 @@ import cors from "cors";
 import express from "express";
 import { authRouter } from "./routes/auth.js";
 import { discoveryRouter, supportRouter, videosRouter } from "./routes/data.js";
+import { libraryRouter, parentalRouter } from "./routes/library.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, "../.env") });
@@ -31,6 +32,8 @@ app.use("/api/auth", authRouter);
 app.use("/api/videos", videosRouter);
 app.use("/api/support", supportRouter);
 app.use("/api/discovery", discoveryRouter);
+app.use("/api/library", libraryRouter);
+app.use("/api/parental", parentalRouter);
 
 app.listen(PORT, () => {
   console.log(`watchamoo backend listening on http://localhost:${PORT}`);

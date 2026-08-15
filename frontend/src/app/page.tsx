@@ -136,10 +136,10 @@ export default function HomePage() {
                 <path d="M16 2v4M8 2v4M3 10h18" />
               </svg>
             </div>
-            <h3 className="mb-3 text-xl font-bold">New Content Every Month</h3>
+            <h3 className="mb-3 text-xl font-bold">Curated language videos</h3>
             <p className="text-sm leading-relaxed text-[var(--foreground)]/75">
-              Our video library is updated every month to give your little one something new to
-              discover and enjoy.
+              A focused pilot catalog in Sepedi, Sesotho and Setswana — built for caregivers and
+              little ones.
             </p>
           </div>
           <div className="rounded-3xl bg-[var(--tile-lavender)] p-8 text-center">
@@ -209,8 +209,8 @@ export default function HomePage() {
             Ready for worry-free screen time?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-[var(--foreground)]/70">
-            Join parents who trust watchamoo for African language entertainment. Start your 7-day
-            free trial today.
+            Join parents exploring African language entertainment on watchamoo. Create a free
+            account to play videos.
           </p>
           <Link
             href="/signup"
@@ -219,7 +219,7 @@ export default function HomePage() {
             Get Started Now
           </Link>
           <p className="mt-4 text-sm font-semibold text-[var(--muted-foreground)]">
-            $9.99/month after your 7-day free trial. No credit card required to start.
+            Free for this pilot — no credit card required.
           </p>
         </div>
       </section>

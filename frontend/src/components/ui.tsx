@@ -13,6 +13,9 @@ export function VideoCard({ video }: { video: Video }) {
           {
             "--thumb-a": video.thumbA,
             "--thumb-b": video.thumbB,
+            backgroundImage: video.thumbnailSrc ? `url(${video.thumbnailSrc})` : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
           } as React.CSSProperties
         }
       >

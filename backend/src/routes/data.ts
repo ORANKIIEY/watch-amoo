@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { parseDiscoveryQuery } from "../lib/discovery.js";
 import { prisma } from "../lib/prisma.js";
 import { AuthedRequest, optionalAuth, requireAuth } from "../lib/session.js";
 
@@ -7,8 +8,42 @@ export const videosRouter = Router();
 export const supportRouter = Router();
 export const discoveryRouter = Router();
 
-videosRouter.get("/", async (_req, res) => {
-  const videos = await prisma.video.findMany({ orderBy: { language: "asc" } });
+videosRouter.get("/", async (req, res) => {
+  const q = String(req.query.q || "").trim().toLowerCase();
+  const language = String(req.query.language || "").trim();
+  const relatedTo = String(req.query.relatedTo || "").trim();
+
+  if (relatedTo) {
+    const seed = await prisma.video.findUnique({ where: { id: relatedTo } });
+    if (!seed) return res.json({ ok: true, videos: [] });
+    const related = await prisma.video.findMany({
+      where: {
+        id: { not: seed.id },
+        OR: [{ language: seed.language }, { theme: seed.theme }],
+      },
+      take: 6,
+    });
+    return res.json({ ok: true, videos: related });
+  }
+
+  const videos = await prisma.video.findMany({
+    where: {
+      AND: [
+        language ? { language } : {},
+        q
+          ? {
+              OR: [
+                { title: { contains: q } },
+                { titleLocal: { contains: q } },
+                { description: { contains: q } },
+                { language: { contains: q } },
+              ],
+            }
+          : {},
+      ],
+    },
+    orderBy: { language: "asc" },
+  });
   return res.json({ ok: true, videos });
 });
 
@@ -41,6 +76,19 @@ supportRouter.post("/", optionalAuth, async (req: AuthedRequest, res) => {
   });
 
   return res.json({ ok: true, message: "Thanks — your message was received." });
+});
+
+discoveryRouter.post("/parse", async (req, res) => {
+  const query = String(req.body?.query || "").trim();
+  if (!query || query.length > 500) {
+    return res.status(400).json({ ok: false, error: "Enter a discovery query." });
+  }
+  const filters = await parseDiscoveryQuery(query);
+  return res.json({
+    ok: true,
+    filters,
+    llmEnabled: Boolean(process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes("xxxxxxxx")),
+  });
 });
 
 discoveryRouter.post("/log", optionalAuth, async (req: AuthedRequest, res) => {
@@ -80,9 +128,11 @@ discoveryRouter.get("/insights", requireAuth, async (req: AuthedRequest, res) =>
   });
   const total = logs.length;
   const matched = logs.filter((l) => l.matchCount > 0).length;
+  const unmatched = logs.filter((l) => l.matchCount === 0).length;
   return res.json({
     ok: true,
     total,
     matchedPct: total ? Math.round((matched / total) * 100) : 0,
+    unmatchedDemand: unmatched,
   });
 });

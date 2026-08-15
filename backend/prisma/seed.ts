@@ -17,6 +17,7 @@ const videos = [
     driveFileId: "1YZb5_zr8onVP5hzLoVHA1qHR3UcEgrlc",
     thumbA: "#8B4513",
     thumbB: "#E8A87C",
+    thumbnailSrc: "/thumbs/sepedi.svg",
   },
   {
     id: "sesotho-main",
@@ -32,6 +33,7 @@ const videos = [
     driveFileId: "1F_I-Sa5eKvmhuj5H7jWX6tPRv57Qquxl",
     thumbA: "#7c2d12",
     thumbB: "#0b6e63",
+    thumbnailSrc: "/thumbs/sesotho.svg",
   },
   {
     id: "setswana-main",
@@ -47,6 +49,7 @@ const videos = [
     driveFileId: "1PcnRFpwi1cZ9gEzUgvKtigEvwA8WNjEZ",
     thumbA: "#9a3412",
     thumbB: "#e8902a",
+    thumbnailSrc: "/thumbs/setswana.svg",
   },
 ];
 

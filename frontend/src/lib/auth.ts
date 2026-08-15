@@ -188,10 +188,73 @@ export async function logDiscovery(entry: {
 export async function fetchDiscoveryInsights(): Promise<{
   total: number;
   matchedPct: number;
+  unmatchedDemand?: number;
 }> {
-  const result = await api<{ total: number; matchedPct: number }>("/api/discovery/insights");
+  const result = await api<{ total: number; matchedPct: number; unmatchedDemand?: number }>(
+    "/api/discovery/insights"
+  );
   if (!result.ok) return { total: 0, matchedPct: 0 };
-  return { total: result.data.total, matchedPct: result.data.matchedPct };
+  return {
+    total: result.data.total,
+    matchedPct: result.data.matchedPct,
+    unmatchedDemand: result.data.unmatchedDemand,
+  };
+}
+
+export async function toggleFavorite(videoId: string, on: boolean) {
+  return api(`/api/library/favorites/${videoId}`, { method: on ? "POST" : "DELETE" });
+}
+
+export async function fetchFavorites(): Promise<string[]> {
+  const result = await api<{ videoIds: string[] }>("/api/library/favorites");
+  if (!result.ok) return [];
+  return result.data.videoIds;
+}
+
+export async function fetchContinueWatching(): Promise<
+  { videoId: string; progressSeconds: number; durationSeconds: number | null }[]
+> {
+  const result = await api<{
+    continueWatching: {
+      videoId: string;
+      progressSeconds: number;
+      durationSeconds: number | null;
+    }[];
+  }>("/api/library/continue");
+  if (!result.ok) return [];
+  return result.data.continueWatching;
+}
+
+export async function reportWatchProgress(input: {
+  videoId: string;
+  progressSeconds: number;
+  durationSeconds?: number;
+  completed?: boolean;
+}) {
+  return api("/api/library/history", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function fetchParental(): Promise<{ hasPin: boolean; kidsMode: boolean }> {
+  const result = await api<{ hasPin: boolean; kidsMode: boolean }>("/api/parental");
+  if (!result.ok) return { hasPin: false, kidsMode: false };
+  return { hasPin: result.data.hasPin, kidsMode: result.data.kidsMode };
+}
+
+export async function setParentalPin(pin: string, currentPin?: string) {
+  return api("/api/parental/set-pin", {
+    method: "POST",
+    body: JSON.stringify({ pin, currentPin }),
+  });
+}
+
+export async function setKidsMode(enabled: boolean, pin?: string) {
+  return api("/api/parental/kids-mode", {
+    method: "POST",
+    body: JSON.stringify({ enabled, pin }),
+  });
 }
 
 /** Theme preference stays local (non-secret). */
