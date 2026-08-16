@@ -27,9 +27,9 @@ backend/data/*.db-journal
 # production
 build/
 
-# misc
-.DS_Store
-*.pem
+# Large local video assets (keep on disk, do not commit)
+frontend/public/videos/**/*.mp4
+frontend/public/videos/**/*.webm
 
 # debug
 npm-debug.log*
