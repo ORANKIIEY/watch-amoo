@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { KidsPlayer } from "@/components/KidsPlayer";
 import { VideoCard } from "@/components/ui";
+import { hasActiveAccess, loadProfile } from "@/lib/access";
 import {
   fetchFavorites,
   reportWatchProgress,
@@ -15,6 +16,7 @@ import { fetchCatalog, fetchVideoById, THEME_LABELS, Video, videoSrcFor } from "
 
 export default function WatchPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const { session, ready } = useAuth();
   const [video, setVideo] = useState<Video | null>(null);
   const [related, setRelated] = useState<Video[]>([]);
@@ -36,6 +38,19 @@ export default function WatchPage() {
       cancelled = true;
     };
   }, [params.id]);
+
+  useEffect(() => {
+    if (!ready || !session) return;
+    void loadProfile().then((profile) => {
+      if (!profile?.language) {
+        router.replace("/language");
+        return;
+      }
+      if (!hasActiveAccess(profile)) {
+        router.replace(profile.subscription_status === "none" ? "/subscribe" : "/paywall");
+      }
+    });
+  }, [ready, session, router]);
 
   useEffect(() => {
     if (!session || !video) return;
@@ -67,8 +82,8 @@ export default function WatchPage() {
     return (
       <div className="mx-auto max-w-3xl px-5 py-16 text-center">
         <h1 className="text-3xl font-black">Video not found</h1>
-        <Link href="/discover" className="btn btn-primary mt-6 inline-flex">
-          Back to Discover
+        <Link href="/watch" className="btn btn-primary mt-6 inline-flex">
+          Back to Watch
         </Link>
       </div>
     );
@@ -81,10 +96,10 @@ export default function WatchPage() {
   return (
     <div className="mx-auto max-w-4xl px-5 py-10">
       <Link
-        href="/discover"
+        href="/watch"
         className="text-sm font-semibold text-[var(--primary)] hover:underline"
       >
-        ← Back to Discover
+        ← Back to Watch
       </Link>
 
       <div className="mt-5 overflow-hidden rounded-3xl border border-[var(--border)]/40 bg-black shadow-[var(--shadow)]">

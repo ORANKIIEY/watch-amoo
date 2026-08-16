@@ -9,6 +9,7 @@ export const UI_LOCALES: { code: UiLocale; label: string }[] = [
 
 type Dict = {
   discover: string;
+  watch: string;
   support: string;
   account: string;
   signIn: string;
@@ -24,6 +25,7 @@ type Dict = {
 const dict: Record<UiLocale, Dict> = {
   en: {
     discover: "Discover",
+    watch: "Watch",
     support: "Support",
     account: "Account",
     signIn: "Sign In",
@@ -38,6 +40,7 @@ const dict: Record<UiLocale, Dict> = {
   },
   nso: {
     discover: "Hwetša",
+    watch: "Lebelela",
     support: "Thekgo",
     account: "Akhaonto",
     signIn: "Tsena",
@@ -52,6 +55,7 @@ const dict: Record<UiLocale, Dict> = {
   },
   st: {
     discover: "Fumana",
+    watch: "Sheba",
     support: "Tšehetso",
     account: "Akhaonto",
     signIn: "Kena",
@@ -66,6 +70,7 @@ const dict: Record<UiLocale, Dict> = {
   },
   tn: {
     discover: "Fitlhelela",
+    watch: "Leba",
     support: "Thuso",
     account: "Akaonto",
     signIn: "Tsena",

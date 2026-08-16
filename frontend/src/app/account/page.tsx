@@ -123,8 +123,12 @@ export default function AccountPage() {
             <span className="font-semibold text-[var(--foreground)]">Name:</span> {session.name}
           </p>
           <p>
-            <Link href="/discover" className="font-semibold text-[var(--primary)] hover:underline">
-              Go to Discover →
+            <Link href="/watch" className="font-semibold text-[var(--primary)] hover:underline">
+              Go to Watch →
+            </Link>
+            {" · "}
+            <Link href="/language" className="font-semibold text-[var(--primary)] hover:underline">
+              Change language
             </Link>
           </p>
         </div>

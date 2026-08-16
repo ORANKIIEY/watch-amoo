@@ -19,7 +19,7 @@ export function SiteHeader() {
       </a>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-4 sm:px-6">
         <Link
-          href={session ? "/discover" : "/"}
+          href={session ? "/watch" : "/"}
           className="font-script shrink-0 text-2xl leading-none tracking-tight text-[var(--brand)] md:text-3xl"
         >
           watchamoo
@@ -29,6 +29,18 @@ export function SiteHeader() {
           className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-2"
           aria-label="Primary"
         >
+          {session ? (
+            <Link
+              href="/watch"
+              className={`rounded-full px-3 py-2 text-sm font-semibold ${
+                pathname.startsWith("/watch")
+                  ? "bg-[var(--cream-soft)] text-[var(--primary)]"
+                  : "text-[var(--foreground)] hover:text-[var(--primary)]"
+              }`}
+            >
+              {copy.watch}
+            </Link>
+          ) : null}
           <Link
             href="/discover"
             className={`rounded-full px-3 py-2 text-sm font-semibold ${

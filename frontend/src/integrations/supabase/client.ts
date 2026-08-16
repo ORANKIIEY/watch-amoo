@@ -23,6 +23,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey || "missing-an
 
 export function authRedirectTo() {
   if (typeof window === "undefined") return undefined;
-  // After email confirmation, Supabase redirects here then we send users to Discover
+  // After email confirmation, Supabase redirects here then we send users to Watch
   return `${window.location.origin}/auth/callback`;
 }

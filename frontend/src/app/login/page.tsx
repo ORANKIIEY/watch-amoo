@@ -8,7 +8,7 @@ import { Alert, AuthCard } from "@/components/ui";
 
 function safeNext(path: string | null) {
   if (path && path.startsWith("/") && !path.startsWith("//")) return path;
-  return "/discover";
+  return "/watch";
 }
 
 function LoginForm() {

@@ -25,7 +25,7 @@ export default function VerifyPage() {
       const next = sessionStorage.getItem("watchamoo_next");
       sessionStorage.removeItem("watchamoo_pending_email");
       sessionStorage.removeItem("watchamoo_next");
-      router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/discover");
+      router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/watch");
     }
   }, [ready, session, router]);
 

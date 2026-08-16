@@ -20,14 +20,14 @@ export default function AuthCallbackPage() {
         return;
       }
       if (data.session) {
-        router.replace("/discover");
+        router.replace("/watch");
         return;
       }
       // Give detectSessionInUrl a moment to parse hash/query tokens
       setTimeout(async () => {
         const again = await supabase.auth.getSession();
         if (cancelled) return;
-        if (again.data.session) router.replace("/discover");
+        if (again.data.session) router.replace("/watch");
         else router.replace("/login");
       }, 800);
     }
