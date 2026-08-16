@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { getStoredLocale, setStoredLocale, t, UiLocale, UI_LOCALES } from "@/lib/i18n";
 
 type LocaleContextValue = {
@@ -13,9 +13,12 @@ type LocaleContextValue = {
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<UiLocale>(() =>
-    typeof window === "undefined" ? "en" : getStoredLocale()
-  );
+  // Match SSR default; hydrate from localStorage after mount to avoid mismatches.
+  const [locale, setLocaleState] = useState<UiLocale>("en");
+
+  useEffect(() => {
+    setLocaleState(getStoredLocale());
+  }, []);
 
   const setLocale = useCallback((next: UiLocale) => {
     setLocaleState(next);

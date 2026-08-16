@@ -1,6 +1,7 @@
 import {
   AGE_RANGES,
   AgeRange,
+  CATALOG,
   filterCatalog,
   Language,
   LANGUAGES,
@@ -24,12 +25,16 @@ const LANGUAGE_ALIASES: Record<string, Language> = {
   pedi: "Sepedi",
   northernsotho: "Sepedi",
   "northern sotho": "Sepedi",
+  nso: "Sepedi",
   sesotho: "Sesotho",
-  sotho: "Sesotho",
-  southernsotho: "Sesotho",
   "southern sotho": "Sesotho",
+  southernsotho: "Sesotho",
+  sot: "Sesotho",
   setswana: "Setswana",
   tswana: "Setswana",
+  tsn: "Setswana",
+  // Keep broad "sotho" last so "northern sotho" / "sesotho" win first when present
+  sotho: "Sesotho",
 };
 
 const THEME_ALIASES: Record<string, Theme> = {
@@ -65,19 +70,27 @@ const THEME_ALIASES: Record<string, Theme> = {
   brush: "everyday",
   thank: "everyday",
   greeting: "greeting",
+  greetings: "greeting",
   hello: "greeting",
   goodmorning: "greeting",
   dumela: "greeting",
   lumela: "greeting",
+  nursery: "greeting",
+  rhyme: "greeting",
+  rhymes: "greeting",
+  song: "lullabies",
+  songs: "lullabies",
 };
 
-/** Local NLP-style parser so Discovery works without an API key. */
+/** Local parser — works offline without an LLM key. */
 export function parseQueryLocally(query: string): ParsedFilters {
   const q = query.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
   const compact = q.replace(/[^a-z0-9\s]/g, " ");
 
   let language: Language | null = null;
-  for (const [alias, lang] of Object.entries(LANGUAGE_ALIASES)) {
+  // Longer aliases first so "northern sotho" beats "sotho"
+  const langEntries = Object.entries(LANGUAGE_ALIASES).sort((a, b) => b[0].length - a[0].length);
+  for (const [alias, lang] of langEntries) {
     if (compact.includes(alias)) {
       language = lang;
       break;
@@ -85,7 +98,8 @@ export function parseQueryLocally(query: string): ParsedFilters {
   }
 
   let theme: Theme | null = null;
-  for (const [alias, t] of Object.entries(THEME_ALIASES)) {
+  const themeEntries = Object.entries(THEME_ALIASES).sort((a, b) => b[0].length - a[0].length);
+  for (const [alias, t] of themeEntries) {
     if (compact.includes(alias)) {
       theme = t;
       break;
@@ -99,9 +113,8 @@ export function parseQueryLocally(query: string): ParsedFilters {
     compact.match(/age\s*(\d+)/);
   if (ageMatch) {
     const n = Number(ageMatch[1]);
-    if (compact.includes("month") || compact.includes("mo")) {
-      ageRange = "0-2";
-    } else if (n <= 2) ageRange = "0-2";
+    if (compact.includes("month") || compact.includes("mo")) ageRange = "0-2";
+    else if (n <= 2) ageRange = "0-2";
     else if (n <= 4) ageRange = "2-4";
     else ageRange = "4-6";
   } else if (/\bbaby\b|\btoddler\b|\binfant\b/.test(compact)) {
@@ -126,8 +139,8 @@ export function parseQueryLocally(query: string): ParsedFilters {
     source: "local",
     rationale:
       bits.length > 0
-        ? `Parsed ${bits.join(", ")} from your request.`
-        : "No clear language/theme/age found — showing popular picks from the pilot catalog.",
+        ? `AI Discovery understood ${bits.join(", ")}.`
+        : "No clear language/theme/age — showing the full pilot catalog.",
   };
 }
 
@@ -142,48 +155,73 @@ async function parseQueryRemote(query: string): Promise<ParsedFilters | null> {
     if (!res.ok) return null;
     const data = (await res.json()) as { ok?: boolean; filters?: ParsedFilters };
     if (!data.ok || !data.filters) return null;
-    return data.filters;
+    return {
+      ...data.filters,
+      source: data.filters.source || "local",
+    };
   } catch {
     return null;
   }
 }
 
-export async function discoverVideos(query: string): Promise<{
+/**
+ * Match strategy for the pilot (1 video per language):
+ * 1) language + theme + age
+ * 2) language + theme
+ * 3) language only  ← most important for this catalog
+ * 4) theme only
+ * 5) full catalog fallback
+ */
+export async function discoverVideos(
+  query: string,
+  catalog?: Video[]
+): Promise<{
   filters: ParsedFilters;
   matches: Video[];
   unmatchedDemand: boolean;
 }> {
   const filters = (await parseQueryRemote(query)) || parseQueryLocally(query);
-  const hasFilters = Boolean(filters.language || filters.theme || filters.ageRange);
+  const pool = catalog && catalog.length > 0 ? catalog : CATALOG;
+
+  const tryFilter = (f: {
+    language?: Language | null;
+    theme?: Theme | null;
+    ageRange?: AgeRange | null;
+  }) => filterCatalog(f, pool);
 
   let matches: Video[] = [];
-  if (hasFilters) {
-    matches = filterCatalog({
+  if (filters.language || filters.theme || filters.ageRange) {
+    matches = tryFilter({
       language: filters.language,
       theme: filters.theme,
       ageRange: filters.ageRange,
     });
-
     if (matches.length === 0) {
-      matches = filterCatalog({
+      matches = tryFilter({
         language: filters.language,
         theme: filters.theme,
         ageRange: null,
       });
     }
     if (matches.length === 0 && filters.language) {
-      matches = filterCatalog({ language: filters.language });
+      matches = tryFilter({ language: filters.language });
+    }
+    if (matches.length === 0 && filters.theme) {
+      matches = tryFilter({ theme: filters.theme });
     }
   }
 
-  const exact = hasFilters
-    ? filterCatalog({
-        language: filters.language,
-        theme: filters.theme,
-        ageRange: filters.ageRange,
-      })
-    : [];
+  const exact = tryFilter({
+    language: filters.language,
+    theme: filters.theme,
+    ageRange: filters.ageRange,
+  });
+  const hasFilters = Boolean(filters.language || filters.theme || filters.ageRange);
   const unmatchedDemand = hasFilters && exact.length === 0;
+
+  if (matches.length === 0) {
+    matches = [...pool];
+  }
 
   void logDiscovery({
     query,

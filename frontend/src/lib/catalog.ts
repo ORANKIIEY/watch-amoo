@@ -175,7 +175,11 @@ export async function fetchCatalog(opts?: {
 }
 
 export function getVideoById(id: string): Video | undefined {
-  return (catalogCache || CATALOG).find((v) => v.id === id);
+  return activeCatalog().find((v) => v.id === id);
+}
+
+function activeCatalog(): Video[] {
+  return catalogCache && catalogCache.length > 0 ? catalogCache : CATALOG;
 }
 
 export async function fetchVideoById(id: string): Promise<Video | null> {
@@ -189,7 +193,7 @@ export async function fetchVideoById(id: string): Promise<Video | null> {
   }
 }
 
-export function videosByLanguage(language: Language, catalog: Video[] = catalogCache || CATALOG): Video[] {
+export function videosByLanguage(language: Language, catalog: Video[] = activeCatalog()): Video[] {
   return catalog.filter((v) => v.language === language);
 }
 
@@ -199,9 +203,10 @@ export function filterCatalog(
     theme?: Theme | null;
     ageRange?: AgeRange | null;
   },
-  catalog: Video[] = catalogCache || CATALOG
+  catalog: Video[] = activeCatalog()
 ): Video[] {
-  return catalog.filter((v) => {
+  const list = catalog.length > 0 ? catalog : CATALOG;
+  return list.filter((v) => {
     if (filters.language && v.language !== filters.language) return false;
     if (filters.theme && v.theme !== filters.theme) return false;
     if (filters.ageRange && v.ageRange !== filters.ageRange) return false;

@@ -1,11 +1,22 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
 import { THEME_LABELS, Video } from "@/lib/catalog";
 
 export function VideoCard({ video }: { video: Video }) {
+  const { session } = useAuth();
+  const locked = !session;
+
   return (
     <Link
       href={`/watch/${video.id}`}
       className="group block overflow-hidden rounded-3xl border border-[var(--border)]/50 bg-[var(--card)] shadow-[var(--shadow)] transition duration-300 hover:-translate-y-1 hover:border-[var(--primary)]"
+      aria-label={
+        locked
+          ? `${video.titleLocal} — sign in required to play`
+          : `Play ${video.titleLocal}`
+      }
     >
       <div
         className="video-thumb relative aspect-video overflow-hidden"
@@ -24,12 +35,12 @@ export function VideoCard({ video }: { video: Video }) {
             {video.language}
           </span>
           <span className="rounded-full bg-black/35 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
-            {video.duration}
+            {locked ? "Sign in to play" : video.duration}
           </span>
         </div>
         <div className="absolute inset-0 flex items-center justify-center opacity-0 transition group-hover:opacity-100">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-[var(--primary)] shadow-lg">
-            ▶
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-[var(--primary)] shadow-lg">
+            {locked ? "!" : "▶"}
           </span>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, AuthCard } from "@/components/ui";
 
@@ -16,41 +16,55 @@ function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function submit() {
+    if (loading) return;
     setError("");
     setLoading(true);
-    const fd = new FormData(e.currentTarget);
-    const result = await signup({
-      name: String(fd.get("name") || ""),
-      email: String(fd.get("email") || ""),
-      password: String(fd.get("password") || ""),
-    });
+    const result = await signup({ name, email, password });
     setLoading(false);
     if (!result.ok) {
       setError(result.error);
       return;
     }
+    if (result.loggedIn) {
+      router.push(next);
+      return;
+    }
     sessionStorage.setItem("watchamoo_pending_email", result.email);
     sessionStorage.setItem("watchamoo_next", next);
+    if (result.devCode) sessionStorage.setItem("watchamoo_dev_code", result.devCode);
+    else sessionStorage.removeItem("watchamoo_dev_code");
     router.push("/verify");
   }
 
   return (
     <AuthCard
       title="Create your account"
-      subtitle="We’ll email you a verification code. Password needs 8+ characters with a letter and a number."
+      subtitle="Password needs 8+ characters with a letter and a number (example: Password1)."
     >
       {error && <Alert tone="error">{error}</Alert>}
-      <form onSubmit={onSubmit} className="space-y-4">
+      <div className="space-y-4">
         <div>
           <label className="label" htmlFor="name">
             Full name
           </label>
-          <input id="name" name="name" className="field" required autoComplete="name" />
+          <input
+            id="name"
+            name="name"
+            className="field"
+            autoComplete="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submit();
+            }}
+          />
         </div>
         <div>
           <label className="label" htmlFor="email">
@@ -61,8 +75,12 @@ function SignupForm() {
             name="email"
             type="email"
             className="field"
-            required
             autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submit();
+            }}
           />
         </div>
         <div>
@@ -74,15 +92,23 @@ function SignupForm() {
             name="password"
             type="password"
             className="field"
-            required
-            minLength={8}
             autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submit();
+            }}
           />
         </div>
-        <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+        <button
+          type="button"
+          className="btn btn-primary w-full"
+          disabled={loading}
+          onClick={() => void submit()}
+        >
           {loading ? "Creating account…" : "Sign up"}
         </button>
-      </form>
+      </div>
       <p className="mt-5 text-center text-sm text-[var(--muted-foreground)]">
         Already have an account?{" "}
         <Link

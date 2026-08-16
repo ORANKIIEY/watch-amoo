@@ -44,13 +44,17 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSessionState] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">(() =>
-    typeof window === "undefined" ? "light" : getThemePreference()
-  );
+  // Always start with the SSR default — reading localStorage in useState causes hydration mismatches
+  // that can detach form handlers (native GET submit with password in the URL).
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   const refreshSession = useCallback(async () => {
     const me = await fetchMe();
     setSessionState(me);
+  }, []);
+
+  useEffect(() => {
+    setTheme(getThemePreference());
   }, []);
 
   useEffect(() => {
@@ -80,7 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ready,
       theme,
       toggleTheme,
-      signup: signupFn,
+      signup: async (input) => {
+        const result = await signupFn(input);
+        if (result.ok && result.loggedIn) await refreshSession();
+        return result;
+      },
       login: async (input) => {
         const result = await loginFn(input);
         if (result.ok && !result.needsVerification) await refreshSession();

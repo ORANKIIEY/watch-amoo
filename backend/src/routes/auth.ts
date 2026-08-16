@@ -51,6 +51,16 @@ function setSessionCookie(res: import("express").Response, token: string, expire
   });
 }
 
+function isDevEmailLog() {
+  return process.env.EMAIL_DEV_LOG === "true";
+}
+
+/** Include OTP in JSON only when local EMAIL_DEV_LOG is enabled. */
+function withDevCode<T extends Record<string, unknown>>(payload: T, code: string) {
+  if (!isDevEmailLog()) return payload;
+  return { ...payload, devCode: code };
+}
+
 async function createSession(userId: string) {
   const token = generateSessionToken();
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
@@ -96,10 +106,32 @@ authRouter.post("/signup", authLimiter, async (req, res) => {
   const email = parsed.data.email.toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    return res.status(409).json({ ok: false, error: "An account with this email already exists." });
+    return res.status(409).json({ ok: false, error: "An account with this email already exists. Try logging in." });
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
+
+  // Local mode: skip email OTP and sign the user in immediately.
+  if (isDevEmailLog()) {
+    const user = await prisma.user.create({
+      data: {
+        name: parsed.data.name,
+        email,
+        passwordHash,
+        verified: true,
+      },
+    });
+    const { token, expiresAt } = await createSession(user.id);
+    setSessionCookie(res, token, expiresAt);
+    return res.json({
+      ok: true,
+      email,
+      loggedIn: true,
+      user: { id: user.id, name: user.name, email: user.email },
+      message: "Account created. You are signed in.",
+    });
+  }
+
   const user = await prisma.user.create({
     data: {
       name: parsed.data.name,
@@ -112,17 +144,16 @@ authRouter.post("/signup", authLimiter, async (req, res) => {
   try {
     const code = await issueOtp(user.id, "verification");
     await sendAuthCodeEmail({ to: email, code, type: "verification" });
+    return res.json({
+      ok: true,
+      email,
+      message: "Account created. Check your email for a verification code.",
+    });
   } catch (err) {
     await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined);
     const message = err instanceof Error ? err.message : "Could not send verification email.";
     return res.status(500).json({ ok: false, error: message });
   }
-
-  return res.json({
-    ok: true,
-    email,
-    message: "Account created. Check your email for a verification code.",
-  });
 });
 
 const loginSchema = z.object({
@@ -168,19 +199,27 @@ authRouter.post("/login", authLimiter, async (req, res) => {
   });
 
   if (!user.verified) {
-    try {
-      const code = await issueOtp(user.id, "verification");
-      await sendAuthCodeEmail({ to: email, code, type: "verification" });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not send verification email.";
-      return res.status(500).json({ ok: false, error: message });
+    // Local mode: auto-verify so caregivers can sign in without email.
+    if (isDevEmailLog()) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { verified: true },
+      });
+    } else {
+      try {
+        const code = await issueOtp(user.id, "verification");
+        await sendAuthCodeEmail({ to: email, code, type: "verification" });
+        return res.json({
+          ok: true,
+          needsVerification: true,
+          email,
+          message: "Please verify your email. We sent a new code.",
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Could not send verification email.";
+        return res.status(500).json({ ok: false, error: message });
+      }
     }
-    return res.json({
-      ok: true,
-      needsVerification: true,
-      email,
-      message: "Please verify your email. We sent a new code.",
-    });
   }
 
   const { token, expiresAt } = await createSession(user.id);
@@ -271,12 +310,21 @@ authRouter.post("/resend-code", sendCodeLimiter, async (req, res) => {
   try {
     const code = await issueOtp(user.id, "verification");
     await sendAuthCodeEmail({ to: email, code, type: "verification" });
+    return res.json(
+      withDevCode(
+        {
+          ok: true,
+          message: isDevEmailLog()
+            ? "A new verification code is ready (shown on screen in local mode)."
+            : "A new verification code was sent.",
+        },
+        code
+      )
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not send email.";
     return res.status(500).json({ ok: false, error: message });
   }
-
-  return res.json({ ok: true, message: "A new verification code was sent." });
 });
 
 authRouter.post("/forgot-password", sendCodeLimiter, async (req, res) => {
@@ -298,12 +346,19 @@ authRouter.post("/forgot-password", sendCodeLimiter, async (req, res) => {
   try {
     const code = await issueOtp(user.id, "reset");
     await sendAuthCodeEmail({ to: email, code, type: "reset" });
+    return res.json(
+      withDevCode(
+        {
+          ok: true,
+          message: "If an account exists for that email, a reset code was sent.",
+        },
+        code
+      )
+    );
   } catch {
     // Still generic — don't reveal email delivery details to attackers
     return res.json(generic);
   }
-
-  return res.json(generic);
 });
 
 const resetSchema = z.object({

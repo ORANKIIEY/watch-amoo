@@ -1,4 +1,8 @@
-# Place language MP4s here (not committed — large files):
-#   sepedi/video.mp4
-#   sesotho/video.mp4
-#   setswana/video.mp4
+# Language videos (gitignored *.mp4 — keep on disk for local playback)
+#
+# Expected layout:
+#   sepedi/video.mp4    → Sepedi
+#   sesotho/video.mp4   → Sesotho
+#   setswana/video.mp4  → Setswana
+#
+# Served as /videos/<language>/video.mp4

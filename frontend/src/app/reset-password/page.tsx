@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, AuthCard } from "@/components/ui";
+import { useClientReady } from "@/lib/useClientReady";
 
 export default function ResetPasswordPage() {
   const { resetPassword } = useAuth();
   const router = useRouter();
+  const clientReady = useClientReady();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -20,6 +22,7 @@ export default function ResetPasswordPage() {
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!clientReady || loading) return;
     setError("");
     setLoading(true);
     const fd = new FormData(e.currentTarget);
@@ -45,7 +48,7 @@ export default function ResetPasswordPage() {
     >
       {error && <Alert tone="error">{error}</Alert>}
       {success && <Alert tone="success">Password updated. Redirecting to log in…</Alert>}
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form method="post" onSubmit={onSubmit} className="space-y-4">
         <div>
           <label className="label" htmlFor="email">
             Email
@@ -89,8 +92,12 @@ export default function ResetPasswordPage() {
             autoComplete="new-password"
           />
         </div>
-        <button type="submit" className="btn btn-primary w-full" disabled={success || loading}>
-          {loading ? "Updating…" : "Update password"}
+        <button
+          type="submit"
+          className="btn btn-primary w-full"
+          disabled={!clientReady || success || loading}
+        >
+          {!clientReady ? "Preparing…" : loading ? "Updating…" : "Update password"}
         </button>
       </form>
       <p className="mt-5 text-center text-sm text-[var(--muted-foreground)]">

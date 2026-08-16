@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, VideoCard } from "@/components/ui";
 import {
+  CATALOG,
   fetchCatalog,
   Language,
   LANGUAGES,
@@ -18,28 +19,43 @@ import { discoverVideos, EXAMPLE_QUERIES, ParsedFilters } from "@/lib/discovery"
 export default function DiscoverClient() {
   const { session, ready } = useAuth();
   const searchParams = useSearchParams();
+  const resultsRef = useRef<HTMLElement | null>(null);
   const [query, setQuery] = useState("");
-  const [titleQuery, setTitleQuery] = useState("");
-  const [catalog, setCatalog] = useState<Video[]>([]);
+  const [catalog, setCatalog] = useState<Video[]>(CATALOG);
   const [aiMatches, setAiMatches] = useState<Video[] | null>(null);
   const [filters, setFilters] = useState<ParsedFilters | null>(null);
   const [unmatched, setUnmatched] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [titleResults, setTitleResults] = useState<Video[] | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
-    fetchCatalog().then(setCatalog);
+    void fetchCatalog().then((videos) => {
+      if (videos.length > 0) setCatalog(videos);
+    });
   }, []);
 
   function runDiscover(q: string) {
-    if (!q.trim()) return;
-    setTitleResults(null);
-    void discoverVideos(q.trim()).then((result) => {
-      setAiMatches(result.matches);
-      setFilters(result.filters);
-      setUnmatched(result.unmatchedDemand);
-      setSearched(true);
-    });
+    const trimmed = q.trim();
+    if (!trimmed) return;
+    setAiError("");
+    setAiLoading(true);
+    setSearched(true);
+    void discoverVideos(trimmed, catalog.length ? catalog : CATALOG)
+      .then((result) => {
+        setAiMatches(result.matches);
+        setFilters(result.filters);
+        setUnmatched(result.unmatchedDemand);
+        requestAnimationFrame(() => {
+          resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      })
+      .catch(() => {
+        setAiError("Discovery failed. Try again in a moment.");
+        setAiMatches(catalog.length ? catalog : CATALOG);
+        setFilters(null);
+      })
+      .finally(() => setAiLoading(false));
   }
 
   useEffect(() => {
@@ -48,6 +64,7 @@ export default function DiscoverClient() {
       setQuery(q);
       runDiscover(q);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run when URL q changes
   }, [searchParams]);
 
   function onDiscover(e: FormEvent) {
@@ -55,24 +72,20 @@ export default function DiscoverClient() {
     runDiscover(query);
   }
 
-  async function onTitleSearch(e: FormEvent) {
-    e.preventDefault();
-    const q = titleQuery.trim();
-    if (!q) {
-      setTitleResults(null);
-      return;
-    }
+  function clearSearch() {
     setAiMatches(null);
+    setFilters(null);
     setSearched(false);
-    const videos = await fetchCatalog({ q });
-    setTitleResults(videos);
+    setUnmatched(false);
+    setQuery("");
+    setAiError("");
   }
 
   const sections = useMemo(
     () =>
       LANGUAGES.map((lang) => ({
         language: lang,
-        videos: videosByLanguage(lang, catalog),
+        videos: videosByLanguage(lang, catalog.length ? catalog : CATALOG),
       })),
     [catalog]
   );
@@ -87,14 +100,15 @@ export default function DiscoverClient() {
           What are you looking for?
         </h1>
         <p className="mt-3 text-lg text-[var(--foreground)]/70">
-          Browse by language, search by title, or ask the AI. Sign in to play any video.
+          Ask in plain words (language, age, theme). We&apos;ll match Sepedi, Sesotho or Setswana
+          videos. Sign in (top-right) to play.
         </p>
       </div>
 
       {!ready ? null : !session ? (
         <div className="mt-6">
           <Alert tone="info">
-            You can browse all videos freely.{" "}
+            Browse and ask the AI freely.{" "}
             <Link href="/login" className="font-bold text-[var(--primary)] hover:underline">
               Sign In
             </Link>{" "}
@@ -114,10 +128,15 @@ export default function DiscoverClient() {
             placeholder='e.g. "songs in Sepedi for my 2-year-old"'
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Discovery query"
+            aria-label="AI discovery query"
+            disabled={aiLoading}
           />
-          <button type="submit" className="btn btn-primary shrink-0 px-8 py-3.5">
-            Ask AI
+          <button
+            type="submit"
+            className="btn btn-primary shrink-0 px-8 py-3.5"
+            disabled={aiLoading || !query.trim()}
+          >
+            {aiLoading ? "Thinking…" : "Ask AI"}
           </button>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -125,11 +144,12 @@ export default function DiscoverClient() {
             <button
               key={example}
               type="button"
+              disabled={aiLoading}
               onClick={() => {
                 setQuery(example);
                 runDiscover(example);
               }}
-              className="rounded-full border border-[var(--border)] bg-[var(--cream-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--muted-foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
+              className="rounded-full border border-[var(--border)] bg-[var(--cream-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--muted-foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-60"
             >
               {example}
             </button>
@@ -137,38 +157,27 @@ export default function DiscoverClient() {
         </div>
       </form>
 
-      <form onSubmit={onTitleSearch} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <label className="sr-only" htmlFor="title-search">
-          Search by title
-        </label>
-        <input
-          id="title-search"
-          className="field"
-          placeholder="Search by title…"
-          value={titleQuery}
-          onChange={(e) => setTitleQuery(e.target.value)}
-        />
-        <button type="submit" className="btn btn-secondary shrink-0">
-          Search titles
-        </button>
-      </form>
+      {aiError && (
+        <div className="mt-5">
+          <Alert tone="error">{aiError}</Alert>
+        </div>
+      )}
 
       {searched && filters && (
         <div className="mt-5 space-y-3">
           <Alert tone="success">
             {filters.rationale}
-            {filters.source ? ` (${filters.source})` : ""}
+            {filters.source ? ` · source: ${filters.source}` : ""}
           </Alert>
           {unmatched && (
             <Alert tone="info">
-              Exact match not in the pilot yet — showing closest videos. This unmatched request is
-              logged as market-demand signal.
+              No exact theme/age match in the pilot — showing the closest language videos.
             </Alert>
           )}
           <div className="flex flex-wrap gap-2 text-sm">
             {[
               filters.language && `Language: ${filters.language}`,
-              filters.theme && `Theme: ${THEME_LABELS[filters.theme]}`,
+              filters.theme && `Theme: ${THEME_LABELS[filters.theme] || filters.theme}`,
               filters.ageRange && `Ages: ${filters.ageRange}`,
               `Confidence: ${filters.confidence}`,
             ]
@@ -185,52 +194,41 @@ export default function DiscoverClient() {
           <button
             type="button"
             className="text-sm font-bold text-[var(--primary)] hover:underline"
-            onClick={() => {
-              setAiMatches(null);
-              setFilters(null);
-              setSearched(false);
-              setUnmatched(false);
-              setQuery("");
-              setTitleResults(null);
-            }}
+            onClick={clearSearch}
           >
-            Clear results & browse by language
+            Clear AI results
           </button>
         </div>
       )}
 
-      {titleResults ? (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {titleResults.map((video) => (
-            <VideoCard key={video.id} video={video} />
-          ))}
-          {titleResults.length === 0 && (
-            <p className="col-span-full text-center text-[var(--muted-foreground)]">
-              No titles matched that search.
-            </p>
+      {aiMatches !== null && (
+        <section
+          ref={resultsRef}
+          className="mt-8 scroll-mt-28"
+          aria-labelledby="ai-results"
+          aria-busy={aiLoading}
+        >
+          <h2 id="ai-results" className="mb-4 text-2xl font-black">
+            AI matches ({aiMatches.length})
+          </h2>
+          {aiLoading ? (
+            <p className="text-[var(--muted-foreground)]">Finding videos…</p>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {aiMatches.map((video) => (
+                <VideoCard key={video.id} video={video} />
+              ))}
+            </div>
           )}
-        </div>
-      ) : aiMatches ? (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {aiMatches.map((video) => (
-            <VideoCard key={video.id} video={video} />
-          ))}
-          {aiMatches.length === 0 && (
-            <p className="col-span-full text-center text-[var(--muted-foreground)]">
-              No videos matched. Try another language or clear AI results.
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="mt-12 space-y-14">
-          {sections.map(({ language, videos }) => (
-            <LanguageSection key={language} language={language} videos={videos} />
-          ))}
-          <p className="text-center text-sm text-[var(--muted-foreground)]">
-            {catalog.length} language videos in the pilot catalog
-          </p>
-        </div>
+        </section>
       )}
+
+      <div className={`space-y-14 ${aiMatches !== null ? "mt-14" : "mt-12"}`}>
+        <h2 className="text-2xl font-black tracking-tight md:text-3xl">Browse by language</h2>
+        {sections.map(({ language, videos }) => (
+          <LanguageSection key={language} language={language} videos={videos} />
+        ))}
+      </div>
     </div>
   );
 }

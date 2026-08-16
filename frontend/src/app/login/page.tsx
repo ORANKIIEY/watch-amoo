@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, AuthCard } from "@/components/ui";
 
@@ -16,19 +16,16 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function submit() {
+    if (loading) return;
     setError("");
     setLoading(true);
-    const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") || "");
-    const result = await login({
-      email,
-      password: String(fd.get("password") || ""),
-    });
+    const result = await login({ email, password });
     setLoading(false);
     if (!result.ok) {
       setError(result.error);
@@ -40,6 +37,8 @@ function LoginForm() {
         (result.email || email).trim().toLowerCase()
       );
       sessionStorage.setItem("watchamoo_next", next);
+      if (result.devCode) sessionStorage.setItem("watchamoo_dev_code", result.devCode);
+      else sessionStorage.removeItem("watchamoo_dev_code");
       router.push("/verify");
       return;
     }
@@ -49,7 +48,7 @@ function LoginForm() {
   return (
     <AuthCard title="Welcome back" subtitle="Log in to play videos for your little one.">
       {error && <Alert tone="error">{error}</Alert>}
-      <form onSubmit={onSubmit} className="space-y-4">
+      <div className="space-y-4">
         <div>
           <label className="label" htmlFor="email">
             Email
@@ -59,8 +58,12 @@ function LoginForm() {
             name="email"
             type="email"
             className="field"
-            required
             autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submit();
+            }}
           />
         </div>
         <div>
@@ -72,8 +75,12 @@ function LoginForm() {
             name="password"
             type="password"
             className="field"
-            required
             autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submit();
+            }}
           />
         </div>
         <div className="text-right">
@@ -84,10 +91,15 @@ function LoginForm() {
             Forgot password?
           </Link>
         </div>
-        <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+        <button
+          type="button"
+          className="btn btn-primary w-full"
+          disabled={loading}
+          onClick={() => void submit()}
+        >
           {loading ? "Signing in…" : "Log in"}
         </button>
-      </form>
+      </div>
       <p className="mt-5 text-center text-sm text-[var(--muted-foreground)]">
         New here?{" "}
         <Link

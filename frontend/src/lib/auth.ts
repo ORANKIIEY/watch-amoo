@@ -50,26 +50,47 @@ export async function signup(input: {
   name: string;
   email: string;
   password: string;
-}): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
-  const result = await api<{ email: string }>("/api/auth/signup", {
+}): Promise<
+  | { ok: true; email: string; loggedIn?: boolean; user?: ApiUser; devCode?: string }
+  | { ok: false; error: string }
+> {
+  const result = await api<{
+    email: string;
+    loggedIn?: boolean;
+    user?: ApiUser;
+    devCode?: string;
+  }>("/api/auth/signup", {
     method: "POST",
     body: JSON.stringify(input),
   });
   if (!result.ok) return result;
-  return { ok: true, email: result.data.email };
+  return {
+    ok: true,
+    email: result.data.email,
+    loggedIn: result.data.loggedIn,
+    user: result.data.user,
+    devCode: result.data.devCode,
+  };
 }
 
 export async function login(input: {
   email: string;
   password: string;
 }): Promise<
-  | { ok: true; needsVerification?: boolean; email?: string; user?: ApiUser }
+  | {
+      ok: true;
+      needsVerification?: boolean;
+      email?: string;
+      user?: ApiUser;
+      devCode?: string;
+    }
   | { ok: false; error: string }
 > {
   const result = await api<{
     needsVerification?: boolean;
     email?: string;
     user?: ApiUser;
+    devCode?: string;
   }>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(input),
@@ -80,6 +101,7 @@ export async function login(input: {
     needsVerification: result.data.needsVerification,
     email: result.data.email,
     user: result.data.user,
+    devCode: result.data.devCode,
   };
 }
 
@@ -108,24 +130,24 @@ export async function verifyOtp(
 
 export async function resendOtp(
   email: string
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const result = await api("/api/auth/resend-code", {
+): Promise<{ ok: true; devCode?: string } | { ok: false; error: string }> {
+  const result = await api<{ devCode?: string }>("/api/auth/resend-code", {
     method: "POST",
     body: JSON.stringify({ email }),
   });
   if (!result.ok) return result;
-  return { ok: true };
+  return { ok: true, devCode: result.data.devCode };
 }
 
 export async function requestPasswordReset(
   email: string
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const result = await api("/api/auth/forgot-password", {
+): Promise<{ ok: true; devCode?: string } | { ok: false; error: string }> {
+  const result = await api<{ devCode?: string }>("/api/auth/forgot-password", {
     method: "POST",
     body: JSON.stringify({ email }),
   });
   if (!result.ok) return result;
-  return { ok: true };
+  return { ok: true, devCode: result.data.devCode };
 }
 
 export async function resetPassword(input: {

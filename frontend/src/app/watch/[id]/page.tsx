@@ -55,7 +55,7 @@ export default function WatchPage() {
     [session, video]
   );
 
-  if (loading) {
+  if (loading || !ready) {
     return (
       <div className="mx-auto max-w-3xl px-5 py-16 text-center text-[var(--muted-foreground)]">
         Loading video…
@@ -74,7 +74,8 @@ export default function WatchPage() {
     );
   }
 
-  const canPlay = ready && Boolean(session);
+  // Playback only after sign-in / sign-up (verified session cookie)
+  const canPlay = Boolean(session);
   const poster = video.thumbnailSrc || undefined;
 
   return (

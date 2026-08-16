@@ -66,6 +66,11 @@
 
 html {
   scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {
@@ -75,6 +80,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-nunito), "Nunito", ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "ss01", "cv11";
+  transition: background-color 160ms ease, color 160ms ease;
 }
 
 a {
