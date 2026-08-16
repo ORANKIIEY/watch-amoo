@@ -13,6 +13,9 @@
     "build": "npm run build -w @watchamoo/backend && npm run build -w @watchamoo/frontend",
     "db:setup": "npm run db:setup -w @watchamoo/backend",
     "db:seed": "npm run db:seed -w @watchamoo/backend",
+    "test": "npm run test -w @watchamoo/backend && npm run test -w @watchamoo/frontend",
+    "lint": "npm run lint -w @watchamoo/frontend",
+    "typecheck": "npm run build -w @watchamoo/backend && npm run typecheck -w @watchamoo/frontend",
     "start": "npm run start -w @watchamoo/frontend"
   },
   "devDependencies": {

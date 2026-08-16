@@ -48,7 +48,6 @@ export default function DiscoverClient() {
       setQuery(q);
       runDiscover(q);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   function onDiscover(e: FormEvent) {

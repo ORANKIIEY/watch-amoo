@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Prisma generate
+        working-directory: backend
+        env:
+          DATABASE_URL: file:./data/ci.db
+        run: npx prisma generate
+      - name: Lint frontend
+        run: npm run lint -w @watchamoo/frontend
+      - name: Typecheck
+        run: |
+          npm run build -w @watchamoo/backend
+          npx tsc -p frontend/tsconfig.json --noEmit
+      - name: Test
+        run: npm test

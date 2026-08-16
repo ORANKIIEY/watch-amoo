@@ -93,7 +93,7 @@ export function parseQueryLocally(query: string): ParsedDiscovery {
     else ageRange = "4-6";
   } else if (/\bbaby\b|\btoddler\b|\binfant\b/.test(compact)) {
     ageRange = "0-2";
-  } else if (/\bpreschool\b|\bkid\b|\bchild\b/.test(compact)) {
+  } else if (/\bpreschool\b|\bkids?\b|\bchildren\b|\bchild\b/.test(compact)) {
     ageRange = "2-4";
   }
 

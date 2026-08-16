@@ -52,8 +52,10 @@ Next rewrites `/api/*` to the Express backend. Auth uses an HttpOnly `watchamoo_
 - Removed unpaid “7-day free trial / $9.99” marketing; pilot is free with account signup
 - Ad-free claim kept for self-hosted MP4 playback (not YouTube)
 
-## Phase 3–4 (done)
+## Phase 5–6 (done)
 
-- Optional `OPENAI_API_KEY` LLM discovery with local parser fallback; unmatched demand logged
-- Favorites, continue-watching, watch history; parental PIN / Kids Mode
-- Catalog served from SQLite; SVG thumbnails; related videos; title search; kids-safe HTML5 player
+- UI locale switcher (English / Sepedi / Sesotho / Setswana) for chrome copy
+- Skip link, focus styles, screen-reader labels, `prefers-reduced-motion`
+- Page OG/Twitter metadata, custom 404
+- Vitest for discovery parsing + catalog filters; GitHub Actions CI (lint, typecheck, test)
+- Regenerated `package-lock.json` (damaged-lockfile warning cleared)

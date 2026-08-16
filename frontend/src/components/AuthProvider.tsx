@@ -44,7 +44,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSessionState] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    typeof window === "undefined" ? "light" : getThemePreference()
+  );
 
   const refreshSession = useCallback(async () => {
     const me = await fetchMe();
@@ -52,9 +54,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const preferred = getThemePreference();
-    setTheme(preferred);
-    document.documentElement.classList.toggle("dark", preferred === "dark");
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
+
+  useEffect(() => {
     refreshSession().finally(() => setReady(true));
   }, [refreshSession]);
 
