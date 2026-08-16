@@ -5,91 +5,96 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { useLocale } from "./LocaleProvider";
 
-/** Logo left · nav + theme + auth pinned top-right */
+/** Logo left · Discover + theme + Sign In / Sign Up always top-right */
 export function SiteHeader() {
   const { session, logout, theme, toggleTheme } = useAuth();
   const { copy } = useLocale();
   const pathname = usePathname();
   const router = useRouter();
-  const isAuthPage = ["/login", "/signup", "/verify", "/forgot-password", "/reset-password"].some(
-    (p) => pathname.startsWith(p)
-  );
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-[var(--border)]/60 bg-[var(--background)]/95 backdrop-blur-sm">
       <a href="#main-content" className="skip-link">
         {copy.skipToContent}
       </a>
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-6">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-4 sm:px-6">
         <Link
           href={session ? "/discover" : "/"}
-          className="font-script text-2xl leading-none tracking-tight text-[var(--brand)] md:text-3xl"
+          className="font-script shrink-0 text-2xl leading-none tracking-tight text-[var(--brand)] md:text-3xl"
         >
           watchamoo
         </Link>
 
-        {!isAuthPage && (
-          <nav
-            className="flex shrink-0 items-center justify-end gap-1 sm:gap-2"
-            aria-label="Primary"
+        <nav
+          className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-2"
+          aria-label="Primary"
+        >
+          <Link
+            href="/discover"
+            className={`rounded-full px-3 py-2 text-sm font-semibold ${
+              pathname.startsWith("/discover")
+                ? "bg-[var(--cream-soft)] text-[var(--primary)]"
+                : "text-[var(--foreground)] hover:text-[var(--primary)]"
+            }`}
           >
-            <Link
-              href="/discover"
-              className={`rounded-full px-3 py-2 text-sm font-semibold ${
-                pathname.startsWith("/discover")
-                  ? "bg-[var(--cream-soft)] text-[var(--primary)]"
-                  : "text-[var(--foreground)] hover:text-[var(--primary)]"
-              }`}
-            >
-              {copy.discover}
-            </Link>
+            {copy.discover}
+          </Link>
 
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="rounded-full border border-[var(--border)] px-3 py-2 text-xs font-bold text-[var(--muted-foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
-              aria-label={theme === "dark" ? `Switch to ${copy.light} mode` : `Switch to ${copy.dark} mode`}
-              aria-pressed={theme === "dark"}
-            >
-              {theme === "dark" ? copy.light : copy.dark}
-            </button>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="rounded-full border border-[var(--border)] px-3 py-2 text-xs font-bold text-[var(--muted-foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
+            aria-label={
+              theme === "dark" ? `Switch to ${copy.light} mode` : `Switch to ${copy.dark} mode`
+            }
+            aria-pressed={theme === "dark"}
+          >
+            {theme === "dark" ? copy.light : copy.dark}
+          </button>
 
-            {session ? (
-              <>
-                <Link
-                  href="/account"
-                  className="rounded-full px-3 py-2 text-sm font-semibold text-[var(--foreground)] hover:text-[var(--primary)]"
-                >
-                  {copy.account}
-                </Link>
-                <button
-                  type="button"
-                  className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] hover:opacity-90"
-                  onClick={() => {
-                    void logout().then(() => router.push("/"));
-                  }}
-                >
-                  {copy.logOut}
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="rounded-full px-3 py-2 text-sm font-semibold text-[var(--foreground)] hover:text-[var(--primary)]"
-                >
-                  {copy.signIn}
-                </Link>
-                <Link
-                  href="/signup"
-                  className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] hover:opacity-90"
-                >
-                  {copy.signUp}
-                </Link>
-              </>
-            )}
-          </nav>
-        )}
+          {session ? (
+            <>
+              <Link
+                href="/account"
+                className={`rounded-full px-3 py-2 text-sm font-semibold ${
+                  pathname.startsWith("/account")
+                    ? "bg-[var(--cream-soft)] text-[var(--primary)]"
+                    : "text-[var(--foreground)] hover:text-[var(--primary)]"
+                }`}
+              >
+                {copy.account}
+              </Link>
+              <button
+                type="button"
+                className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] hover:opacity-90"
+                onClick={() => {
+                  void logout().then(() => router.push("/"));
+                }}
+              >
+                {copy.logOut}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className={`rounded-full px-3 py-2 text-sm font-semibold ${
+                  pathname.startsWith("/login")
+                    ? "bg-[var(--cream-soft)] text-[var(--primary)]"
+                    : "text-[var(--foreground)] hover:text-[var(--primary)]"
+                }`}
+              >
+                {copy.signIn}
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] hover:opacity-90"
+              >
+                {copy.signUp}
+              </Link>
+            </>
+          )}
+        </nav>
       </div>
     </header>
   );

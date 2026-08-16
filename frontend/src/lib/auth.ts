@@ -1,7 +1,9 @@
 /**
- * Browser API client — talks to Express via same-origin Next rewrites (/api → :4000).
- * Session is an HttpOnly cookie; never store passwords/OTPs in localStorage.
+ * Auth via Supabase (working flow). Catalog/library still talk to Express /api.
  */
+
+import { authRedirectTo, supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 export type ApiUser = {
   id: string;
@@ -15,6 +17,25 @@ export type Session = {
   email: string;
   name: string;
 };
+
+function displayName(user: User): string {
+  const meta = user.user_metadata || {};
+  return (
+    (typeof meta.name === "string" && meta.name) ||
+    (typeof meta.full_name === "string" && meta.full_name) ||
+    user.email?.split("@")[0] ||
+    "Caregiver"
+  );
+}
+
+export function sessionFromUser(user: User | null | undefined): Session | null {
+  if (!user?.email) return null;
+  return {
+    userId: user.id,
+    email: user.email,
+    name: displayName(user),
+  };
+}
 
 async function api<T>(
   path: string,
@@ -51,25 +72,41 @@ export async function signup(input: {
   email: string;
   password: string;
 }): Promise<
-  | { ok: true; email: string; loggedIn?: boolean; user?: ApiUser; devCode?: string }
+  | { ok: true; email: string; loggedIn?: boolean; needsVerification?: boolean; user?: ApiUser }
   | { ok: false; error: string }
 > {
-  const result = await api<{
-    email: string;
-    loggedIn?: boolean;
-    user?: ApiUser;
-    devCode?: string;
-  }>("/api/auth/signup", {
-    method: "POST",
-    body: JSON.stringify(input),
+  const email = input.email.trim().toLowerCase();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: input.password,
+    options: {
+      emailRedirectTo: authRedirectTo(),
+      data: { name: input.name.trim() },
+    },
   });
-  if (!result.ok) return result;
+
+  if (error) return { ok: false, error: error.message };
+
+  const user = data.user;
+  // With email confirmation on, session is null until the link is clicked
+  if (!data.session) {
+    return {
+      ok: true,
+      email,
+      needsVerification: true,
+      user: user
+        ? { id: user.id, name: displayName(user), email: user.email || email, verified: false }
+        : undefined,
+    };
+  }
+
   return {
     ok: true,
-    email: result.data.email,
-    loggedIn: result.data.loggedIn,
-    user: result.data.user,
-    devCode: result.data.devCode,
+    email,
+    loggedIn: true,
+    user: user
+      ? { id: user.id, name: displayName(user), email: user.email || email, verified: true }
+      : undefined,
   };
 }
 
@@ -82,72 +119,79 @@ export async function login(input: {
       needsVerification?: boolean;
       email?: string;
       user?: ApiUser;
-      devCode?: string;
     }
   | { ok: false; error: string }
 > {
-  const result = await api<{
-    needsVerification?: boolean;
-    email?: string;
-    user?: ApiUser;
-    devCode?: string;
-  }>("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify(input),
+  const email = input.email.trim().toLowerCase();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password: input.password,
   });
-  if (!result.ok) return result;
+
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes("email not confirmed") || msg.includes("confirm")) {
+      return { ok: true, needsVerification: true, email };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  const user = data.user;
   return {
     ok: true,
-    needsVerification: result.data.needsVerification,
-    email: result.data.email,
-    user: result.data.user,
-    devCode: result.data.devCode,
+    user: user
+      ? {
+          id: user.id,
+          name: displayName(user),
+          email: user.email || email,
+          verified: true,
+        }
+      : undefined,
   };
 }
 
 export async function logout(): Promise<void> {
-  await api("/api/auth/logout", { method: "POST" });
+  const { error } = await supabase.auth.signOut();
+  if (error) console.error(error.message);
 }
 
 export async function fetchMe(): Promise<Session | null> {
-  const result = await api<{ user: ApiUser | null }>("/api/auth/me");
-  if (!result.ok || !result.data.user) return null;
-  const u = result.data.user;
-  return { userId: u.id, email: u.email, name: u.name };
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) return null;
+  return sessionFromUser(data.user);
 }
 
+/** Supabase uses email link confirmation — no OTP code to submit. */
 export async function verifyOtp(
-  email: string,
-  code: string
+  _email: string,
+  _code: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const result = await api("/api/auth/verify", {
-    method: "POST",
-    body: JSON.stringify({ email, code }),
-  });
-  if (!result.ok) return result;
-  return { ok: true };
+  return {
+    ok: false,
+    error: "Open the confirmation link we sent to your email to finish signing up.",
+  };
 }
 
 export async function resendOtp(
   email: string
-): Promise<{ ok: true; devCode?: string } | { ok: false; error: string }> {
-  const result = await api<{ devCode?: string }>("/api/auth/resend-code", {
-    method: "POST",
-    body: JSON.stringify({ email }),
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: email.trim().toLowerCase(),
+    options: { emailRedirectTo: authRedirectTo() },
   });
-  if (!result.ok) return result;
-  return { ok: true, devCode: result.data.devCode };
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 export async function requestPasswordReset(
   email: string
-): Promise<{ ok: true; devCode?: string } | { ok: false; error: string }> {
-  const result = await api<{ devCode?: string }>("/api/auth/forgot-password", {
-    method: "POST",
-    body: JSON.stringify({ email }),
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/reset-password`,
   });
-  if (!result.ok) return result;
-  return { ok: true, devCode: result.data.devCode };
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 export async function resetPassword(input: {
@@ -155,15 +199,12 @@ export async function resetPassword(input: {
   token: string;
   password: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const result = await api("/api/auth/reset-password", {
-    method: "POST",
-    body: JSON.stringify({
-      email: input.email,
-      code: input.token,
-      password: input.password,
-    }),
-  });
-  if (!result.ok) return result;
+  // After clicking the reset email link, Supabase already has a recovery session.
+  // `token` is unused — password update uses the active recovery session.
+  void input.email;
+  void input.token;
+  const { error } = await supabase.auth.updateUser({ password: input.password });
+  if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
 
@@ -171,11 +212,18 @@ export async function changePassword(input: {
   current: string;
   next: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const result = await api("/api/auth/change-password", {
-    method: "POST",
-    body: JSON.stringify(input),
+  const { data: userData } = await supabase.auth.getUser();
+  const email = userData.user?.email;
+  if (!email) return { ok: false, error: "Not signed in." };
+
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email,
+    password: input.current,
   });
-  if (!result.ok) return result;
+  if (reauthError) return { ok: false, error: "Current password is incorrect." };
+
+  const { error } = await supabase.auth.updateUser({ password: input.next });
+  if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
 

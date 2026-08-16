@@ -75,8 +75,8 @@ export const CATALOG: Video[] = [
       "Watch nursery rhyme entertainment in Sepedi — curated for caregivers and little ones.",
     videoSrc: "/videos/sepedi/video.mp4",
     driveFileId: "1YZb5_zr8onVP5hzLoVHA1qHR3UcEgrlc",
-    thumbA: "#8B4513",
-    thumbB: "#E8A87C",
+    thumbA: "#0F766E",
+    thumbB: "#5EEAD4",
     thumbnailSrc: "/thumbs/sepedi.svg",
   },
   {
@@ -91,8 +91,8 @@ export const CATALOG: Video[] = [
       "Watch nursery rhyme entertainment in Sesotho — curated for caregivers and little ones.",
     videoSrc: "/videos/sesotho/video.mp4",
     driveFileId: "1F_I-Sa5eKvmhuj5H7jWX6tPRv57Qquxl",
-    thumbA: "#7c2d12",
-    thumbB: "#0b6e63",
+    thumbA: "#0369A1",
+    thumbB: "#FBBF24",
     thumbnailSrc: "/thumbs/sesotho.svg",
   },
   {
@@ -107,8 +107,8 @@ export const CATALOG: Video[] = [
       "Watch nursery rhyme entertainment in Setswana — curated for caregivers and little ones.",
     videoSrc: "/videos/setswana/video.mp4",
     driveFileId: "1PcnRFpwi1cZ9gEzUgvKtigEvwA8WNjEZ",
-    thumbA: "#9a3412",
-    thumbB: "#e8902a",
+    thumbA: "#0E7490",
+    thumbB: "#FB7185",
     thumbnailSrc: "/thumbs/setswana.svg",
   },
 ];

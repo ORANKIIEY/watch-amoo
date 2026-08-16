@@ -25,6 +25,14 @@ function SignupForm() {
   async function submit() {
     if (loading) return;
     setError("");
+    if (!name.trim() || !email.trim() || !password) {
+      setError("Please fill in name, email, and password.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
     setLoading(true);
     const result = await signup({ name, email, password });
     setLoading(false);
@@ -38,15 +46,13 @@ function SignupForm() {
     }
     sessionStorage.setItem("watchamoo_pending_email", result.email);
     sessionStorage.setItem("watchamoo_next", next);
-    if (result.devCode) sessionStorage.setItem("watchamoo_dev_code", result.devCode);
-    else sessionStorage.removeItem("watchamoo_dev_code");
     router.push("/verify");
   }
 
   return (
     <AuthCard
       title="Create your account"
-      subtitle="Password needs 8+ characters with a letter and a number (example: Password1)."
+      subtitle="We’ll email you a confirmation link. After you confirm, you can sign in and play videos."
     >
       {error && <Alert tone="error">{error}</Alert>}
       <div className="space-y-4">
@@ -56,7 +62,6 @@ function SignupForm() {
           </label>
           <input
             id="name"
-            name="name"
             className="field"
             autoComplete="name"
             value={name}
@@ -72,7 +77,6 @@ function SignupForm() {
           </label>
           <input
             id="email"
-            name="email"
             type="email"
             className="field"
             autoComplete="email"
@@ -89,7 +93,6 @@ function SignupForm() {
           </label>
           <input
             id="password"
-            name="password"
             type="password"
             className="field"
             autoComplete="new-password"

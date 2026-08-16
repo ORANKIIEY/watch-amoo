@@ -24,6 +24,10 @@ function LoginForm() {
   async function submit() {
     if (loading) return;
     setError("");
+    if (!email.trim() || !password) {
+      setError("Enter your email and password.");
+      return;
+    }
     setLoading(true);
     const result = await login({ email, password });
     setLoading(false);
@@ -37,8 +41,6 @@ function LoginForm() {
         (result.email || email).trim().toLowerCase()
       );
       sessionStorage.setItem("watchamoo_next", next);
-      if (result.devCode) sessionStorage.setItem("watchamoo_dev_code", result.devCode);
-      else sessionStorage.removeItem("watchamoo_dev_code");
       router.push("/verify");
       return;
     }
@@ -55,7 +57,6 @@ function LoginForm() {
           </label>
           <input
             id="email"
-            name="email"
             type="email"
             className="field"
             autoComplete="email"
@@ -72,7 +73,6 @@ function LoginForm() {
           </label>
           <input
             id="password"
-            name="password"
             type="password"
             className="field"
             autoComplete="current-password"

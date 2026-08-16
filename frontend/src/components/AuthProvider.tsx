@@ -10,7 +10,6 @@ import {
 } from "react";
 import {
   changePassword as changePasswordFn,
-  fetchMe,
   getThemePreference,
   login as loginFn,
   logout as logoutFn,
@@ -18,10 +17,12 @@ import {
   resendOtp as resendOtpFn,
   resetPassword as resetPasswordFn,
   Session,
+  sessionFromUser,
   setThemePreference,
   signup as signupFn,
   verifyOtp as verifyOtpFn,
 } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 type AuthContextValue = {
   session: Session | null;
@@ -44,17 +45,17 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSessionState] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
-  // Always start with the SSR default — reading localStorage in useState causes hydration mismatches
-  // that can detach form handlers (native GET submit with password in the URL).
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   const refreshSession = useCallback(async () => {
-    const me = await fetchMe();
-    setSessionState(me);
+    const { data } = await supabase.auth.getSession();
+    setSessionState(sessionFromUser(data.session?.user));
   }, []);
 
   useEffect(() => {
-    setTheme(getThemePreference());
+    const stored = getThemePreference();
+    setTheme(stored);
+    document.documentElement.classList.toggle("dark", stored === "dark");
   }, []);
 
   useEffect(() => {
@@ -62,13 +63,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    refreshSession().finally(() => setReady(true));
-  }, [refreshSession]);
+    let mounted = true;
+
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!mounted) return;
+        setSessionState(sessionFromUser(data.session?.user));
+      })
+      .catch((err) => {
+        console.error("[watchamoo] getSession failed", err);
+      })
+      .finally(() => {
+        if (mounted) setReady(true);
+      });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSessionState(sessionFromUser(next?.user));
+      setReady(true);
+    });
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
       setThemePreference(next);
+      document.documentElement.classList.toggle("dark", next === "dark");
       return next;
     });
   }, []);
@@ -94,11 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (result.ok && !result.needsVerification) await refreshSession();
         return result;
       },
-      verifyOtp: async (email, code) => {
-        const result = await verifyOtpFn(email, code);
-        if (result.ok) await refreshSession();
-        return result;
-      },
+      verifyOtp: verifyOtpFn,
       resendOtp: resendOtpFn,
       requestPasswordReset: requestResetFn,
       resetPassword: resetPasswordFn,

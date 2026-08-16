@@ -36,7 +36,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${nunito.variable} h-full antialiased`}>
+    <html lang="en" className={`${nunito.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Apply saved theme before paint so Dark/Light works immediately */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('watchamoo_theme');if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="flex min-h-full flex-col font-sans">
         <AuthProvider>
           <LocaleProvider>

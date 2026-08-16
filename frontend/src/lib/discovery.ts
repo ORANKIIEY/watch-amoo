@@ -33,7 +33,6 @@ const LANGUAGE_ALIASES: Record<string, Language> = {
   setswana: "Setswana",
   tswana: "Setswana",
   tsn: "Setswana",
-  // Keep broad "sotho" last so "northern sotho" / "sesotho" win first when present
   sotho: "Sesotho",
 };
 
@@ -82,13 +81,12 @@ const THEME_ALIASES: Record<string, Theme> = {
   songs: "lullabies",
 };
 
-/** Local parser — works offline without an LLM key. */
+/** Local parser — works offline without an LLM key. Instant. */
 export function parseQueryLocally(query: string): ParsedFilters {
   const q = query.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
   const compact = q.replace(/[^a-z0-9\s]/g, " ");
 
   let language: Language | null = null;
-  // Longer aliases first so "northern sotho" beats "sotho"
   const langEntries = Object.entries(LANGUAGE_ALIASES).sort((a, b) => b[0].length - a[0].length);
   for (const [alias, lang] of langEntries) {
     if (compact.includes(alias)) {
@@ -145,10 +143,13 @@ export function parseQueryLocally(query: string): ParsedFilters {
 }
 
 async function parseQueryRemote(query: string): Promise<ParsedFilters | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
   try {
     const res = await fetch("/api/discovery/parse", {
       method: "POST",
       credentials: "include",
+      signal: controller.signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query }),
     });
@@ -161,28 +162,12 @@ async function parseQueryRemote(query: string): Promise<ParsedFilters | null> {
     };
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
-/**
- * Match strategy for the pilot (1 video per language):
- * 1) language + theme + age
- * 2) language + theme
- * 3) language only  ← most important for this catalog
- * 4) theme only
- * 5) full catalog fallback
- */
-export async function discoverVideos(
-  query: string,
-  catalog?: Video[]
-): Promise<{
-  filters: ParsedFilters;
-  matches: Video[];
-  unmatchedDemand: boolean;
-}> {
-  const filters = (await parseQueryRemote(query)) || parseQueryLocally(query);
-  const pool = catalog && catalog.length > 0 ? catalog : CATALOG;
-
+function matchVideos(filters: ParsedFilters, pool: Video[]): { matches: Video[]; unmatchedDemand: boolean } {
   const tryFilter = (f: {
     language?: Language | null;
     theme?: Theme | null;
@@ -223,13 +208,37 @@ export async function discoverVideos(
     matches = [...pool];
   }
 
+  return { matches, unmatchedDemand };
+}
+
+/**
+ * Instant local match, then optionally upgrade with a remote/LLM parse (2.5s timeout).
+ * Never blocks the UI on a hanging API.
+ */
+export async function discoverVideos(
+  query: string,
+  catalog?: Video[]
+): Promise<{
+  filters: ParsedFilters;
+  matches: Video[];
+  unmatchedDemand: boolean;
+}> {
+  const pool = catalog && catalog.length > 0 ? catalog : CATALOG;
+  const local = parseQueryLocally(query);
+  const localResult = matchVideos(local, pool);
+
+  // Try remote briefly; keep local if it fails/times out
+  const remote = await parseQueryRemote(query);
+  const filters = remote || local;
+  const { matches, unmatchedDemand } = remote ? matchVideos(remote, pool) : localResult;
+
   void logDiscovery({
     query,
     language: filters.language,
     theme: filters.theme,
     ageRange: filters.ageRange,
-    matchCount: exact.length,
-    matchedIds: exact.map((v) => v.id),
+    matchCount: matches.length,
+    matchedIds: matches.map((v) => v.id),
   });
 
   return { filters, matches, unmatchedDemand };

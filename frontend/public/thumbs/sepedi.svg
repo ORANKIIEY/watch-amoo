@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Sepedi nursery rhymes">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#8B4513"/>
-      <stop offset="100%" stop-color="#E8A87C"/>
+      <stop offset="0%" stop-color="#0F766E"/>
+      <stop offset="100%" stop-color="#5EEAD4"/>
     </linearGradient>
   </defs>
   <rect width="640" height="360" fill="url(#g)"/>
   <circle cx="320" cy="150" r="54" fill="#fff" fill-opacity="0.92"/>
-  <polygon points="308,130 308,170 348,150" fill="#8B4513"/>
+  <polygon points="308,130 308,170 348,150" fill="#0F766E"/>
   <text x="320" y="250" text-anchor="middle" fill="#fff" font-family="Nunito, Arial, sans-serif" font-size="36" font-weight="800">Sepedi</text>
-  <text x="320" y="290" text-anchor="middle" fill="#fff" fill-opacity="0.9" font-family="Nunito, Arial, sans-serif" font-size="18">Dikoaa taa Sepedi</text>
+  <text x="320" y="290" text-anchor="middle" fill="#fff" fill-opacity="0.9" font-family="Nunito, Arial, sans-serif" font-size="18">Dikoša tša Sepedi</text>
 </svg>

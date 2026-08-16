@@ -45,7 +45,7 @@ export function VideoCard({ video }: { video: Video }) {
         </div>
       </div>
       <div className="space-y-1.5 p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-[var(--brand)]">
+        <p className="text-xs font-bold uppercase tracking-wide text-[var(--accent)]">
           {THEME_LABELS[video.theme]} · Ages {video.ageRange}
         </p>
         <h3 className="text-lg font-bold leading-snug text-[var(--foreground)]">

@@ -2,80 +2,76 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Alert, AuthCard } from "@/components/ui";
-import { useClientReady } from "@/lib/useClientReady";
 
 export default function ForgotPasswordPage() {
   const { requestPasswordReset } = useAuth();
   const router = useRouter();
-  const clientReady = useClientReady();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
-  const [devCode, setDevCode] = useState("");
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!clientReady || loading) return;
+  async function submit() {
+    if (loading) return;
     setError("");
     setSuccess(false);
-    setDevCode("");
+    const mail = email.trim().toLowerCase();
+    if (!mail) {
+      setError("Enter your email.");
+      return;
+    }
     setLoading(true);
-    const fd = new FormData(e.currentTarget);
-    const mail = String(fd.get("email") || "")
-      .trim()
-      .toLowerCase();
     const result = await requestPasswordReset(mail);
     setLoading(false);
     if (!result.ok) {
       setError(result.error);
       return;
     }
-    setEmail(mail);
     sessionStorage.setItem("watchamoo_reset_email", mail);
-    if (result.devCode) {
-      sessionStorage.setItem("watchamoo_dev_code", result.devCode);
-      setDevCode(result.devCode);
-    }
     setSuccess(true);
   }
 
   return (
     <AuthCard
       title="Forgot password"
-      subtitle="Enter your email. If an account exists, we’ll send a reset code."
+      subtitle="Enter your email. If an account exists, Supabase will send a reset link."
     >
       {error && <Alert tone="error">{error}</Alert>}
       {success && (
         <Alert tone="success">
-          {devCode ? (
-            <>
-              Local reset code: <strong className="tracking-[0.2em]">{devCode}</strong>
-            </>
-          ) : (
-            <>If an account exists for {email}, a reset code was sent. Check your inbox.</>
-          )}
+          Check {email} for a password reset link. After you open it, set a new password on the
+          next screen.
         </Alert>
       )}
       {!success ? (
-        <form method="post" onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <label className="label" htmlFor="email">
               Email
             </label>
-            <input id="email" name="email" type="email" className="field" required />
+            <input
+              id="email"
+              type="email"
+              className="field"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void submit();
+              }}
+            />
           </div>
           <button
-            type="submit"
+            type="button"
             className="btn btn-primary w-full"
-            disabled={!clientReady || loading}
+            disabled={loading}
+            onClick={() => void submit()}
           >
-            {!clientReady ? "Preparing…" : loading ? "Sending…" : "Send reset code"}
+            {loading ? "Sending…" : "Send reset link"}
           </button>
-        </form>
+        </div>
       ) : (
         <button
           type="button"
